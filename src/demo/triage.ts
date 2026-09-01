@@ -15,6 +15,8 @@ export type TriageResult = {
   priority: 'P1' | 'P2' | 'P3'
   summary: string
   answer: string
+  nextStep: string
+  actionLabel: string
   tools: MockToolRun[]
   durationMs: number
 }
@@ -61,6 +63,8 @@ export function runTriage(message: string): TriageResult {
       priority: 'P1',
       summary: 'Possible duplicate and unauthorized card activity',
       answer: 'I found two likely duplicate card authorizations, including one the customer does not recognize. I prepared case MOCK-FRD-1042 and a card-freeze action for human approval. No account change has been made.',
+      nextStep: 'Review the prepared card freeze and fraud escalation',
+      actionLabel: 'Open approval',
       durationMs: 842,
       tools: [
         mock('get_customer_profile', 'Customer profile', 'Identity verified · Card ending 4242 · Account in good standing'),
@@ -79,6 +83,8 @@ export function runTriage(message: string): TriageResult {
       priority: 'P2',
       summary: 'Delayed outbound transfer',
       answer: 'The simulation shows the transfer accepted by our mock ledger but waiting on the external rail. I prepared escalation MOCK-PAY-2088; no payment was retried or changed.',
+      nextStep: 'Review the payment-rail evidence and prepared escalation',
+      actionLabel: 'Open escalation',
       durationMs: 614,
       tools: [
         mock('get_customer_profile', 'Customer profile', 'Business account verified · No account restrictions'),
@@ -96,6 +102,8 @@ export function runTriage(message: string): TriageResult {
     priority: 'P3',
     summary: 'General account-support request',
     answer: 'I classified this as a general account request. The mock profile is healthy, and I would ask one clarifying question before dispatching a specialist.',
+    nextStep: 'Add the missing account or issue detail',
+    actionLabel: 'Add context',
     durationMs: 318,
     tools: [mock('get_customer_profile', 'Customer profile', 'Identity verified · Account in good standing')],
   }

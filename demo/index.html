@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MassCard · Customer triage</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="rail" aria-label="Workspace switcher">
+      <div class="brand-mark" aria-label="MassCard">M</div>
+      <button class="rail-button active" aria-label="MassCard Lab">ML</button>
+      <button class="rail-button" aria-label="Add workspace">+</button>
+      <div class="rail-spacer"></div>
+      <div class="avatar avatar-user">AQ</div>
+    </aside>
+
+    <aside class="channels" aria-label="Channel navigation">
+      <header class="workspace-title">
+        <div><strong>MassCard Lab</strong><span>Local workspace</span></div>
+        <button aria-label="Workspace options">•••</button>
+      </header>
+      <label class="search"><span>⌕</span><input aria-label="Search" placeholder="Search"></label>
+      <nav>
+        <p class="nav-label">COLLABORATION</p>
+        <a href="#"><span>⌁</span> Activity <b>3</b></a>
+        <a href="#"><span>☷</span> Decisions</a>
+        <p class="nav-label row">CHANNELS <button aria-label="Add channel">+</button></p>
+        <a href="#"><span>#</span> product-decisions</a>
+        <a class="selected" href="#"><span>#</span> customer-triage <i>6</i></a>
+        <a href="#"><span>#</span> payments-ops</a>
+        <p class="nav-label">AGENTS</p>
+        <div id="agent-nav" class="agent-nav" aria-live="polite"></div>
+      </nav>
+      <footer class="connection"><span></span><div><strong>Local relay</strong><small>Connected · :8008</small></div></footer>
+    </aside>
+
+    <main class="conversation">
+      <header class="channel-header">
+        <div class="channel-name"><span>#</span><div><h1>customer-triage</h1><p>Shared queue for customer-impacting issues</p></div></div>
+        <div class="channel-actions"><div class="member-stack"><span>AL</span><span>BO</span><span>CA</span><span>+3</span></div><button aria-label="Search channel">⌕</button><button aria-label="Channel options">•••</button></div>
+      </header>
+
+      <section id="messages" class="messages" aria-label="Channel messages" aria-live="polite">
+        <div class="date-rule"><span>Today, 12 September</span></div>
+        <article class="message">
+          <div class="avatar alice">AL</div><div class="message-body"><header><strong>Alice Lane</strong><time>10:21</time></header><p>Seeing a spike in duplicate card-charge reports from the support queue. Can we get a quick read before stand-up?</p><div class="reaction">👀 <span>3</span></div></div>
+        </article>
+        <article class="message">
+          <div class="avatar bob">BO</div><div class="message-body"><header><strong>Bob Okafor</strong><time>10:23</time></header><p>Status page is green. The reports look concentrated around one merchant reference.</p></div>
+        </article>
+        <article class="message highlighted">
+          <div class="avatar carol">CA</div><div class="message-body"><header><strong>Carol Adams</strong><time>10:24</time></header><p><mark>@Triage</mark> My card was charged three times at Northstar Market and two of them are not mine. Please investigate and prepare an escalation.</p><div class="message-meta"><span>↳ Triggered triage workflow</span><span>event 8f2c…91aa</span></div></div>
+        </article>
+        <div id="agent-response" class="agent-response loading">
+          <div class="avatar bot">T</div><div class="message-body"><header><strong>Triage Coordinator</strong><span class="bot-label">AGENT</span><time>10:24</time></header><div class="typing"><i></i><i></i><i></i><span>Running governed triage…</span></div></div>
+        </div>
+      </section>
+
+      <form id="composer" class="composer">
+        <div class="composer-tools"><button type="button" aria-label="Attach file">＋</button><button type="button" aria-label="Formatting">Aa</button><span></span><small>Use <kbd>@Triage</kbd> to invoke the shared agent</small></div>
+        <label><span class="sr-only">Message customer triage</span><textarea id="message-input" rows="2">@Triage My card was charged three times and two were not mine. Please investigate and prepare an escalation.</textarea></label>
+        <div class="composer-footer"><div><button type="button" aria-label="Emoji">☺</button><button type="button" aria-label="Mention agent">@</button></div><button class="send" type="submit">Send <span>⌘↵</span></button></div>
+      </form>
+    </main>
+
+    <aside class="inspector" aria-label="Agent execution details">
+      <header><div><span class="eyebrow">OMNIGENT RUNTIME</span><h2>Live execution</h2></div><span id="runtime-state" class="status-pill">Connecting</span></header>
+      <section class="runtime-card">
+        <div class="runtime-top"><div class="runtime-icon">⌘</div><div><strong>masscard-local</strong><span>Self-hosted runner · :8009</span></div><b>ONLINE</b></div>
+        <dl><div><dt>Sandbox</dt><dd>macOS Seatbelt</dd></div><div><dt>Network</dt><dd><span class="blocked-dot"></span>Blocked</dd></div><div><dt>Session</dt><dd>ses_triage_01</dd></div></dl>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-heading"><h3>Agent team</h3><span id="agent-count">—</span></div>
+        <div id="agent-cards" class="agent-cards"></div>
+      </section>
+
+      <section class="panel-section trace-section">
+        <div class="section-heading"><h3>Tool trace</h3><span id="trace-duration">Waiting</span></div>
+        <ol id="tool-trace" class="tool-trace"><li class="empty-trace">Mention @Triage to start a governed turn.</li></ol>
+      </section>
+      <footer class="runtime-footer"><span>LOCAL ONLY</span><p>No cloud sandbox provider · Mock data</p></footer>
+    </aside>
+  </div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

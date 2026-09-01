@@ -13,6 +13,24 @@ Buzz Desktop
 
 The bridge creates one external-host Omnigent session for each ACP session, forwards the Buzz thread, streams the response, and publishes the final answer back to the triggering thread.
 
+## Local triage demo
+
+The repository also includes a zero-credential demo with three triage agents and deterministic mock tools. Both services bind to loopback only:
+
+```bash
+npm install
+npm run demo
+```
+
+- Buzz-style collaboration client: `http://127.0.0.1:8008/?demo=1`
+- Self-hosted Omnigent-shaped mock runtime: `http://127.0.0.1:8009`
+
+Try the fraud route or open `http://127.0.0.1:8008/?demo=1&scenario=payments` for payments operations. The setup includes a Triage Coordinator, Fraud Review, and Payments Operations agent. Every tool is explicitly labeled as mock, mutations are previews only, and the fraud card-freeze step requires human approval.
+
+![Fraud triage channel](./artifacts/screenshots/triage-channel.png)
+
+![Payments triage route](./artifacts/screenshots/payments-triage.png)
+
 ## Prerequisites
 
 - macOS and Node.js 20.11+

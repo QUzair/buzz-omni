@@ -16,6 +16,8 @@ test('routes suspicious card charges to fraud with mock evidence and an approval
   assert.equal(result.tools.every((tool) => tool.mock === true), true)
   assert.match(result.answer, /approval/i)
   assert.match(result.answer, /MOCK-FRD-1042/)
+  assert.match(result.nextStep, /card freeze/i)
+  assert.equal(result.actionLabel, 'Open approval')
 })
 
 test('routes transfer delays to payments operations without claiming a real action', () => {
@@ -25,4 +27,6 @@ test('routes transfer delays to payments operations without claiming a real acti
   assert.equal(result.priority, 'P2')
   assert.match(result.answer, /simulation/i)
   assert.equal(result.tools.some((tool) => tool.name === 'check_payment_rails'), true)
+  assert.match(result.nextStep, /payment-rail/i)
+  assert.equal(result.actionLabel, 'Open escalation')
 })
