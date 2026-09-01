@@ -1,35 +1,19 @@
 {
-  "name": "masscard-collaboration-plane",
+  "name": "buzz-omnigent-acp",
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "bin": {
+    "buzz-omnigent-acp": "dist/src/cli.js"
+  },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "test": "vitest run",
-    "lint": "eslint ."
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/test/**/*.test.js",
+    "start": "node dist/src/cli.js"
   },
-  "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "lucide-react": "latest",
-    "vite": "latest",
-    "react": "latest",
-    "react-dom": "latest"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@eslint/js": "latest",
-    "@testing-library/jest-dom": "latest",
-    "@testing-library/react": "latest",
-    "@testing-library/user-event": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "eslint": "latest",
-    "eslint-plugin-react-hooks": "latest",
-    "eslint-plugin-react-refresh": "latest",
-    "globals": "latest",
-    "jsdom": "latest",
-    "typescript": "latest",
-    "typescript-eslint": "latest",
-    "vitest": "latest"
+    "@types/node": "latest",
+    "typescript": "latest"
   }
 }
