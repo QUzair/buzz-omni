@@ -16,8 +16,8 @@ export class OmnigentClient {
 
   private async expectOk(response: Response, operation: string): Promise<Response> {
     if (response.ok) return response
-    const detail = (await response.text()).slice(0, 300)
-    throw new Error(`${operation} failed (${response.status})${detail ? `: ${detail}` : ''}`)
+    await response.body?.cancel()
+    throw new Error(`${operation} failed (${response.status})`)
   }
 
   async createManagedSession(title?: string): Promise<string> {

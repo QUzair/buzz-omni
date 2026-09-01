@@ -1,0 +1,12 @@
+{
+  "id": "omnigent",
+  "label": "MassCard Omnigent",
+  "command": "buzz-omnigent-acp",
+  "args": [],
+  "env": {
+    "OMNIGENT_BASE_URL": "https://your-omnigent.example",
+    "OMNIGENT_AGENT_ID": "ag_replace_me",
+    "OMNIGENT_SANDBOX_PROVIDER": "daytona"
+  },
+  "installHint": "Run npm install && npm link in the buzz-omnigent-acp repository."
+}

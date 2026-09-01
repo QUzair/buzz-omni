@@ -28,6 +28,17 @@ test('creates a managed sandbox session with the configured agent', async () => 
   assert.deepEqual(receivedBody, { agent_id: 'ag_market', host_type: 'managed', title: 'Buzz thread', sandbox_provider: 'daytona' })
 })
 
+test('does not expose an Omnigent error body in thrown messages', async () => {
+  const fakeFetch: typeof fetch = async () => new Response('internal_secret=do-not-log', { status: 500 })
+  const client = new OmnigentClient(config, fakeFetch)
+  await assert.rejects(client.createManagedSession('Buzz thread'), (error: unknown) => {
+    assert.ok(error instanceof Error)
+    assert.match(error.message, /failed \(500\)/)
+    assert.doesNotMatch(error.message, /internal_secret/)
+    return true
+  })
+})
+
 test('streams a turn after opening the SSE connection', async () => {
   const calls: string[] = []
   const fakeFetch: typeof fetch = async (input) => {

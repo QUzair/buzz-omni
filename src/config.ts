@@ -32,7 +32,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
   return {
     omnigentBaseUrl: parsedUrl.toString().replace(/\/$/, ''),
     omnigentAgentId: required(env, 'OMNIGENT_AGENT_ID'),
-    omnigentApiToken: env.OMNIGENT_API_TOKEN?.trim() || undefined,
+    omnigentApiToken: env.OMNIGENT_API_TOKEN?.trim() || readStoredToken(parsedUrl.toString()),
     sandboxProvider: env.OMNIGENT_SANDBOX_PROVIDER?.trim() || undefined,
     workspaceUrl: env.OMNIGENT_WORKSPACE_URL?.trim() || undefined,
     buzzCli: env.BUZZ_CLI?.trim() || 'buzz',
@@ -40,3 +40,22 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
     turnTimeoutMs: positiveInteger(env.BRIDGE_TURN_TIMEOUT_MS, 15 * 60 * 1000, 'BRIDGE_TURN_TIMEOUT_MS'),
   }
 }
+
+function readStoredToken(serverUrl: string): string | undefined {
+  try {
+    const raw = JSON.parse(readFileSync(join(homedir(), '.omnigent', 'auth_tokens.json'), 'utf8')) as unknown
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+    const records = raw as Record<string, unknown>
+    const normalized = serverUrl.replace(/\/$/, '')
+    const record = records[normalized]
+    if (!record || typeof record !== 'object' || Array.isArray(record)) return undefined
+    const fields = record as Record<string, unknown>
+    if (typeof fields.expires_at === 'number' && fields.expires_at <= Date.now() / 1000) return undefined
+    return typeof fields.token === 'string' && fields.token ? fields.token : undefined
+  } catch {
+    return undefined
+  }
+}
+import { readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
