@@ -6,7 +6,7 @@ import { AcpServer } from '../src/acp-server.js'
 import type { PublishInput } from '../src/buzz-publisher.js'
 import type { BridgeConfig } from '../src/config.js'
 
-const config: BridgeConfig = { omnigentBaseUrl: 'https://omni.example', omnigentAgentId: 'ag_market', buzzCli: 'buzz', maxPromptBytes: 100_000, turnTimeoutMs: 5_000 }
+const config: BridgeConfig = { omnigentBaseUrl: 'https://omni.example', omnigentAgentId: 'ag_market', omnigentHostId: '550e8400-e29b-41d4-a716-446655440000', omnigentWorkspace: '/srv/omni-agent', buzzCli: 'buzz', maxPromptBytes: 100_000, turnTimeoutMs: 5_000 }
 
 test('maps ACP session lifecycle to Omnigent and publishes the answer to Buzz', async () => {
   const input = new PassThrough()
@@ -16,7 +16,7 @@ test('maps ACP session lifecycle to Omnigent and publishes the answer to Buzz', 
   output.on('data', (chunk: string) => { wire += chunk })
   const published: PublishInput[] = []
   const omnigent = {
-    createManagedSession: async () => 'ses_remote',
+    createSession: async () => 'ses_remote',
     runTurn: async (_id: string, _prompt: string, onDelta: (text: string) => void) => { onDelta('sandbox answer'); return 'sandbox answer' },
   }
   new AcpServer(config, omnigent, async (message) => { published.push(message) }, input, output).run()

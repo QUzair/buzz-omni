@@ -6,7 +6,8 @@ import type { BridgeConfig } from '../src/config.js'
 const config: BridgeConfig = {
   omnigentBaseUrl: 'https://omni.example',
   omnigentAgentId: 'ag_market',
-  sandboxProvider: 'daytona',
+  omnigentHostId: '550e8400-e29b-41d4-a716-446655440000',
+  omnigentWorkspace: '/srv/omni-agent',
   buzzCli: 'buzz',
   maxPromptBytes: 1000,
   turnTimeoutMs: 5_000,
@@ -17,21 +18,27 @@ function sseResponse(frames: object[]): Response {
   return new Response(new ReadableStream({ start(controller) { controller.enqueue(encoded); controller.close() } }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
 }
 
-test('creates a managed sandbox session with the configured agent', async () => {
+test('creates a session on the configured self-hosted runner', async () => {
   let receivedBody: Record<string, unknown> | undefined
   const fakeFetch: typeof fetch = async (_input, init) => {
     receivedBody = JSON.parse(String(init?.body)) as Record<string, unknown>
     return Response.json({ id: 'ses_123' }, { status: 201 })
   }
   const client = new OmnigentClient(config, fakeFetch)
-  assert.equal(await client.createManagedSession('Buzz thread'), 'ses_123')
-  assert.deepEqual(receivedBody, { agent_id: 'ag_market', host_type: 'managed', title: 'Buzz thread', sandbox_provider: 'daytona' })
+  assert.equal(await client.createSession('Buzz thread'), 'ses_123')
+  assert.deepEqual(receivedBody, {
+    agent_id: 'ag_market',
+    host_type: 'external',
+    host_id: '550e8400-e29b-41d4-a716-446655440000',
+    workspace: '/srv/omni-agent',
+    title: 'Buzz thread',
+  })
 })
 
 test('does not expose an Omnigent error body in thrown messages', async () => {
   const fakeFetch: typeof fetch = async () => new Response('internal_secret=do-not-log', { status: 500 })
   const client = new OmnigentClient(config, fakeFetch)
-  await assert.rejects(client.createManagedSession('Buzz thread'), (error: unknown) => {
+  await assert.rejects(client.createSession('Buzz thread'), (error: unknown) => {
     assert.ok(error instanceof Error)
     assert.match(error.message, /failed \(500\)/)
     assert.doesNotMatch(error.message, /internal_secret/)

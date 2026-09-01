@@ -14,5 +14,16 @@ executor:
   harness: codex
   reasoning_effort: medium
 
+# Use macOS's built-in Seatbelt sandbox: no cloud sandbox or provider account.
+# Shell and file operations stay inside this workspace and cannot make network calls.
+os_env:
+  type: caller_process
+  cwd: .
+  sandbox:
+    type: darwin_seatbelt
+    write_paths:
+      - .
+    allow_network: false
+
 cancellable: true
 async: false

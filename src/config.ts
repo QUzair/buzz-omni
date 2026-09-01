@@ -1,9 +1,9 @@
 export type BridgeConfig = {
   omnigentBaseUrl: string
   omnigentAgentId: string
+  omnigentHostId: string
+  omnigentWorkspace: string
   omnigentApiToken?: string
-  sandboxProvider?: string
-  workspaceUrl?: string
   buzzCli: string
   maxPromptBytes: number
   turnTimeoutMs: number
@@ -29,12 +29,19 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
     throw new Error('OMNIGENT_BASE_URL must use HTTPS, except for a local development server')
   }
 
+  const omnigentHostId = required(env, 'OMNIGENT_HOST_ID')
+  if (!/^(?:[0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/i.test(omnigentHostId)) {
+    throw new Error('OMNIGENT_HOST_ID must be a UUID')
+  }
+  const omnigentWorkspace = required(env, 'OMNIGENT_WORKSPACE')
+  if (!isAbsolute(omnigentWorkspace)) throw new Error('OMNIGENT_WORKSPACE must be an absolute path on the Omnigent host')
+
   return {
     omnigentBaseUrl: parsedUrl.toString().replace(/\/$/, ''),
     omnigentAgentId: required(env, 'OMNIGENT_AGENT_ID'),
+    omnigentHostId,
+    omnigentWorkspace,
     omnigentApiToken: env.OMNIGENT_API_TOKEN?.trim() || readStoredToken(parsedUrl.toString()),
-    sandboxProvider: env.OMNIGENT_SANDBOX_PROVIDER?.trim() || undefined,
-    workspaceUrl: env.OMNIGENT_WORKSPACE_URL?.trim() || undefined,
     buzzCli: env.BUZZ_CLI?.trim() || 'buzz',
     maxPromptBytes: positiveInteger(env.BRIDGE_MAX_PROMPT_BYTES, 128 * 1024, 'BRIDGE_MAX_PROMPT_BYTES'),
     turnTimeoutMs: positiveInteger(env.BRIDGE_TURN_TIMEOUT_MS, 15 * 60 * 1000, 'BRIDGE_TURN_TIMEOUT_MS'),
@@ -58,4 +65,4 @@ function readStoredToken(serverUrl: string): string | undefined {
 }
 import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'

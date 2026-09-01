@@ -1,9 +1,0 @@
-# Omnigent server-managed sandbox configuration.
-# Source: https://github.com/omnigent-ai/omnigent/blob/main/deploy/daytona/README.md#server-managed-sandboxes
-sandbox:
-  provider: daytona
-  server_url: https://replace-with-your-public-omnigent-url.example
-  daytona:
-    # Values are copied from the Omnigent server environment; secrets do not
-    # live in this YAML file.
-    env: [OPENAI_API_KEY]

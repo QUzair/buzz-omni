@@ -2,7 +2,7 @@
   "name": "buzz-omnigent-acp",
   "private": true,
   "version": "0.1.0",
-  "description": "A minimal ACP bridge from Buzz mentions to managed Omnigent sandbox sessions.",
+  "description": "A minimal ACP bridge from Buzz mentions to self-hosted Omnigent sandbox sessions.",
   "type": "module",
   "engines": {
     "node": ">=20.11"

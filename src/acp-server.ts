@@ -13,7 +13,7 @@ export class AcpServer {
 
   constructor(
     private readonly config: BridgeConfig,
-    private readonly omnigent: Pick<OmnigentClient, 'createManagedSession' | 'runTurn'>,
+    private readonly omnigent: Pick<OmnigentClient, 'createSession' | 'runTurn'>,
     private readonly publish: Publisher,
     private readonly input: Readable = process.stdin,
     private readonly output: Writable = process.stdout,
@@ -62,12 +62,12 @@ export class AcpServer {
       try {
         const meta = params._meta && typeof params._meta === 'object' ? params._meta as Record<string, unknown> : {}
         const title = typeof meta.sessionTitle === 'string' ? meta.sessionTitle : 'Buzz shared agent session'
-        const omnigentId = await this.omnigent.createManagedSession(title)
+        const omnigentId = await this.omnigent.createSession(title)
         this.sessions.set(omnigentId, { omnigentId, busy: false })
         this.writeResult(request.id, { sessionId: omnigentId })
       } catch (error) {
         console.error('[buzz-omnigent-acp] session creation failed:', safeError(error))
-        this.writeError(request.id, -32000, 'Could not create the managed Omnigent session')
+        this.writeError(request.id, -32000, 'Could not create the self-hosted Omnigent session')
       }
       return
     }
