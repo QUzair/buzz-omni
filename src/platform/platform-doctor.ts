@@ -49,7 +49,8 @@ export async function runPlatformDoctor(
     await checkPath('Buzz Desktop', '/Applications/Buzz.app'),
   ]
   if (report.provider === 'copilot') {
-    checks.push(await checkCommand('GitHub Copilot CLI', 'copilot', ['--version']))
+    checks.push(await checkCommand('GitHub CLI authentication', 'gh', ['auth', 'status']))
+    checks.push(await checkCopilotSdk())
   }
 
   process.stdout.write('Local Buzz + Omnigent platform doctor\n\n')
@@ -77,6 +78,17 @@ async function checkCommand(label: string, command: string, args: string[]): Pro
     return { label, ok: true }
   } catch {
     return { label, ok: false }
+  }
+}
+
+async function checkCopilotSdk(): Promise<CheckResult> {
+  try {
+    const { stdout } = await execFile('uv', ['tool', 'dir'], { encoding: 'utf8', timeout: 10_000 })
+    const python = resolve(stdout.trim(), 'omnigent', 'bin', 'python')
+    await execFile(python, ['-c', 'import copilot'], { encoding: 'utf8', timeout: 10_000 })
+    return { label: 'GitHub Copilot SDK', ok: true }
+  } catch {
+    return { label: 'GitHub Copilot SDK', ok: false, detail: 'run npm run setup' }
   }
 }
 

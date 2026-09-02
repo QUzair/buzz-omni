@@ -1,144 +1,249 @@
-# Local Buzz + Omnigent Mastercard POC
+# Mastercard Local Buzz + Omnigent Platform
 
-This repository runs the actual [Buzz](https://github.com/block/buzz) relay/CLI/ACP stack and the actual [Omnigent](https://github.com/omnigent-ai/omnigent) server/host stack on one Mac. The demo surface is the installed Buzz Desktop client. Omnigent is the local agent runtime behind it, not a replacement chat UI.
+A single-repository proof of concept for several employees steering persistent, governed agents from the real Buzz Desktop client.
 
-![Buzz Desktop showing a real TokenLaunch thread](artifacts/buzz-tokenization-launch.png)
+> **Buzz is the shared human–agent collaboration plane. Omnigent is the governed agent execution plane.**
 
-The operational evidence returned by the agent tools is deliberately synthetic. The collaboration transport, Nostr identities and signatures, membership-scoped channels, owner-attested agent identities, ACP listeners, Omnigent sessions, model harness, sandbox, tool calls, and threaded Buzz replies are live components.
+The repository starts a pinned self-hosted Buzz relay, seeds signed employee and agent identities into five private channels, starts a pinned local Omnigent server and host, renders five sandboxed agent definitions, and runs one upstream `buzz-acp` listener per agent. An `@agent` mention becomes a real Omnigent turn and returns as a signed Buzz thread reply.
 
-## Architecture
+![Native Buzz Desktop showing the TokenLaunch workflow](artifacts/buzz-tokenization-launch.png)
 
-```text
-Buzz Desktop on macOS
-  └─ local Buzz relay :8010
-       └─ one upstream buzz-acp listener per agent/channel
-            └─ ACP-over-stdio bridge in this repository
-                 └─ local Omnigent server :8013
-                      └─ local Omnigent host/runner
-                           └─ macOS Seatbelt sandbox
-                                └─ Copilot SDK or Gemini harness
-                                     └─ modeled Mastercard tool
-                                          └─ signed threaded reply to Buzz
-```
+Only the Mastercard people, incidents, identifiers, metrics, and tool data are modeled. The collaboration, identities, signatures, channel membership, ACP lifecycle, Omnigent sessions, provider harness, sandbox, tool dispatch, and replies are working components.
 
-No Daytona, E2B, Modal, hosted sandbox, public callback, or fake Buzz web client is used. The selected model provider still receives model prompts; the execution host, sandbox, tools, Buzz data, and Omnigent control plane stay local.
+## Quick start
 
-## Run it
+### Prerequisites
 
-Prerequisites:
+- macOS with [Buzz Desktop](https://github.com/block/buzz) installed in `/Applications/Buzz.app`
+- Node.js 20.11 or newer
+- Docker Desktop running
+- Git, Rust/Cargo, and [`uv`](https://docs.astral.sh/uv/)
+- an authenticated GitHub CLI account with Copilot access for the default provider, or a new Gemini API key
 
-- macOS with Buzz Desktop installed
-- Node.js 20.11+, Docker Desktop, Rust/Cargo, Git, and `uv`
-- for the default provider, an authenticated local GitHub Copilot CLI
-
-Copy only the **public key** from **Buzz → Settings → Profile → Identity**. Never copy or expose the private key.
+### 1. Install and prepare the repository
 
 ```bash
 npm install
-npm run platform:bootstrap
-BUZZ_DESKTOP_PUBKEY=<64-character-public-key> MODEL_PROVIDER=copilot npm run demo
+npm run setup
 ```
 
-`platform:bootstrap` is a one-time build/install of the pinned upstream revisions. `npm run demo` is the real platform launcher and is equivalent to `npm run platform:up`.
+`npm run setup`:
+
+1. creates a private, ignored `.env` from `.env.example` without overwriting an existing file;
+2. verifies the upstream Buzz Git origin and builds the exact pinned `buzz` and `buzz-acp` Rust binaries;
+3. installs the exact pinned Omnigent revision with its Copilot and Gemini harness extras;
+4. prints the next configuration and doctor commands.
+
+The first Rust build can take several minutes. Subsequent runs reuse the local artifacts.
+
+### 2. Enroll your existing Buzz identity
+
+In Buzz Desktop, open **Settings → Profile → Identity** and copy only the 64-character public key. Never reveal the private key.
+
+Set it in the `.env` created by setup:
+
+```dotenv
+MODEL_PROVIDER=copilot
+BUZZ_DESKTOP_PUBKEY=replace-with-your-public-key
+OPEN_BUZZ_DESKTOP=true
+```
+
+Validate the completed configuration:
+
+```bash
+npm run doctor
+```
+
+### 3. Run the whole platform
+
+```bash
+npm run demo
+```
+
+The command builds the bridge, starts the Buzz Docker stack, seeds the community, starts Omnigent and its local host, launches five ACP listeners, starts the status page, and opens Buzz Desktop. Stop everything cleanly with `Ctrl-C` in this terminal.
+
+### 4. Join the local Buzz community once
 
 In Buzz Desktop:
 
-1. Open the profile menu, expand **Community actions**, and choose **Add a community**.
-2. Choose **Join an existing community**.
-3. Enter `http://127.0.0.1:8010`.
-4. Open `#tokenization-launch` or another seeded channel.
-5. Mention the channel agent, for example: `@TokenLaunch use check_tokenization_readiness for TR-DEMO-781. Do not grant approval.`
+1. open the profile menu;
+2. expand **Community actions**;
+3. choose **Add a community → Join an existing community**;
+4. enter `http://127.0.0.1:8010`;
+5. complete the local profile prompt and open one of the seeded channels.
 
-The public-key environment variable enrolls that existing Buzz identity in the relay and all five channels. It is not a secret. Enrollment persists in the local Docker volume, so subsequent runs can omit it unless the Buzz identity changes.
+Buzz labels a loopback community **Local Dev** in the native client. The five Mastercard channels and their signed participants are inside that real local community. Membership persists across platform restarts.
 
-Press `Ctrl-C` in the launcher terminal to stop Omnigent, all ACP listeners, and the local Buzz containers cleanly.
+### 5. Trigger a real agent turn
 
-## Switch model harnesses
+Open `#tokenization-launch` and send:
 
-Copilot is the default and uses the local Copilot CLI/SDK authentication already present on the machine:
-
-```bash
-MODEL_PROVIDER=copilot npm run demo
+```text
+@TokenLaunch use check_tokenization_readiness for TR-DEMO-781. Report the returned gates, owners, blocker, and recommendation only. Do not grant approval.
 ```
 
-Gemini is an alternate Omnigent harness. Keep its key in the calling shell; the platform does not write it to the repository or generated configuration:
+The expected result is a threaded, signed response containing the synthetic gate table and `NO_GO_PENDING_OWNER_APPROVAL`. See [the complete narrated demo sequence](docs/DEMO_SCENARIOS.md) for all five scenarios.
 
-```bash
-export GEMINI_API_KEY='your-rotated-key'
-MODEL_PROVIDER=gemini npm run demo
+## What starts locally
+
+```text
+Buzz Desktop
+  └─ Buzz relay :8010
+       ├─ Postgres, Redis, MinIO
+       └─ five upstream buzz-acp listeners
+            └─ repository ACP bridge
+                 └─ Omnigent server :8013
+                      └─ local Omnigent host
+                           └─ macOS Seatbelt
+                                └─ Copilot or Gemini harness
+                                     └─ synthetic Mastercard tool
+                                          └─ signed Buzz thread reply
 ```
 
-If a key has ever been pasted into a chat or screenshot, revoke it and issue a new one before use.
+No Daytona, E2B, Modal, managed sandbox, public callback, or imitation Buzz web client is used. Model inference goes to the provider selected in `.env`; the Buzz data, Omnigent control plane, execution host, OS-tool sandbox, and modeled tools stay local.
 
-## Live local ports
+Read the [architecture](docs/ARCHITECTURE.md), [product vision](docs/VISION.md), and [accepted architecture decision](docs/decisions/0001-separate-collaboration-and-execution.md) for the full rationale.
 
-| Port | Component |
-| ---: | --- |
-| `8010` | Buzz HTTP/WebSocket relay |
-| `8011` | Buzz readiness endpoint |
-| `8012` | Buzz Prometheus metrics |
-| `8013` | Omnigent API and optional session inspection UI |
-| `8014` | Read-only platform status page |
+## Mastercard demo channels
 
-All published ports bind to `127.0.0.1`.
+| Buzz channel | Agent | Human steering | Required modeled tool |
+| --- | --- | --- | --- |
+| `#network-operations` | `@NetworkOps` | authorization dip, infrastructure observation, safe incident boundary | `compare_authorization_health` |
+| `#fraud-intelligence` | `@FraudReview` | suspicious activity, product context, approval gate | `assess_fraud_cluster` |
+| `#tokenization-launch` | `@TokenLaunch` | launch target, endpoint status, owner/blocker requirement | `check_tokenization_readiness` |
+| `#settlement-operations` | `@SettlementOps` | batch variance, transport evidence, read-only investigation | `investigate_settlement_variance` |
+| `#compliance-evidence` | `@ComplianceReview` | review need, legal boundary, evidence inventory | `lookup_control_evidence` |
 
-## Mastercard triage communities
+The seeded employees—Aisha Khan, Maya Patel, Elena Rossi, Jon Bell, and Priya Shah—are fictitious identities with real local signatures. Agent write-like behavior produces `NOT_EXECUTED` previews and never modifies an operational system.
 
-| Buzz channel | Agent | Modeled tool behavior |
-| --- | --- | --- |
-| `#network-operations` | `@NetworkOps` | Compares authorization health by corridor and isolates likely fault domains. |
-| `#fraud-intelligence` | `@FraudReview` | Reviews synthetic suspicious activity and returns approval-gated controls. |
-| `#tokenization-launch` | `@TokenLaunch` | Checks certification gates, blockers, owners, and go/no-go status. |
-| `#settlement-operations` | `@SettlementOps` | Traces modeled batch variance without changing settlement state. |
-| `#compliance-evidence` | `@ComplianceReview` | Inventories synthetic control evidence and distinguishes gaps from failures. |
+## Provider switching
 
-The seeded employees and conversations are fictitious. Write-like tools produce previews or recommendations only; they do not touch Mastercard systems or grant operational approval.
+### Copilot
 
-## What is real and what is modeled
+Copilot is the default and uses Omnigent’s native `github-copilot-sdk` harness. The SDK package and its backing CLI server are installed by `npm run setup`; authentication falls back to the local `gh` CLI login:
+
+```dotenv
+MODEL_PROVIDER=copilot
+GEMINI_API_KEY=
+```
+
+### Gemini
+
+Gemini uses Omnigent’s native Antigravity SDK harness:
+
+```dotenv
+MODEL_PROVIDER=gemini
+GEMINI_API_KEY=replace-with-a-new-key
+```
+
+Restart `npm run demo` after changing providers. Buzz handles, identities, channels, tool schemas, shared-session behavior, and safety instructions remain unchanged.
+
+The platform never writes the Gemini key into generated agent YAML, logs, or source files. Revoke any key that has been pasted into chat or otherwise exposed. Full variable semantics and precedence are in [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run setup` | One-time `.env`, pinned Buzz build, pinned Omnigent install, and doctor. |
+| `npm run doctor` | Validate configuration, local tools, Docker, Buzz Desktop, provider CLI, and generated binaries. |
+| `npm run demo` | Build and run the complete integrated platform. |
+| `npm run platform:up` | Lower-level alias used by `demo`. |
+| `npm run platform:bootstrap` | Rebuild/reinstall pinned upstream artifacts without touching `.env`. |
+| `npm run agents:copilot` | Render the five Copilot Omnigent YAML files under `.local/agents/`. |
+| `npm run agents:gemini` | Render the five Gemini Omnigent YAML files under `.local/agents/`. |
+| `npm test` | Clean build and run the Node test suite. |
+| `python3 -m unittest mastercard_tools.test_tools` | Verify deterministic modeled tools and approval boundaries. |
+
+## Local ports and health
+
+| Port | Component | Check |
+| ---: | --- | --- |
+| `8010` | Buzz HTTP/WebSocket relay | open as the Buzz community URL |
+| `8011` | Buzz health service | `curl -fsS http://127.0.0.1:8011/_readiness` |
+| `8012` | Buzz Prometheus metrics | `curl -fsS http://127.0.0.1:8012/metrics` |
+| `8013` | Omnigent API and optional inspection UI | `curl -fsS http://127.0.0.1:8013/health` |
+| `8014` | read-only platform status | `curl -fsS http://127.0.0.1:8014/health` |
+
+All published services bind to `127.0.0.1`. The Omnigent UI is backend evidence, not the demo’s primary chat surface.
+
+## Real versus modeled
 
 Real:
 
-- upstream Buzz relay, `buzz` CLI, `buzz-acp`, and the installed Buzz Desktop app
-- signed Nostr messages, relay membership, private channel membership, and NIP-OA owner attestations
-- upstream Omnigent server, SQLite session state, local host/runner, provider harness, and macOS Seatbelt sandbox
-- five concurrent agent listeners, session creation, tool dispatch, and signed threaded responses
+- upstream Buzz relay, CLI, ACP listener, and installed Buzz Desktop app;
+- local Nostr keys, signatures, relay membership, private channel membership, and NIP-OA owner attestations;
+- upstream Omnigent server, SQLite session state, local host/runner, provider harness, and Seatbelt sandbox;
+- five concurrent listeners, explicit host/session binding, tool invocation, and signed threaded responses.
 
 Modeled:
 
-- Mastercard employees, accounts, corridors, control IDs, and operational scenarios
-- Python tool return values in `mastercard_tools/`
-- approval and mutation outcomes, which remain non-executing previews
+- Mastercard employee personas and conversation scripts;
+- merchants, requestors, batches, controls, corridors, metrics, and operational events;
+- Python tool return values and all previewed approvals or mutations.
 
-Buzz's private channels are membership-scoped. This POC does not claim end-to-end encryption.
+Buzz private channels are membership-scoped. This POC does not claim end-to-end encryption, production authorization, legal advice, or connectivity to Mastercard systems.
 
-## Reproducibility and state
+## Repository map
+
+```text
+.
+├── README.md                         operator entry point
+├── .env.example                     safe user-configurable surface
+├── docs/
+│   ├── VISION.md                    product thesis and roadmap
+│   ├── ARCHITECTURE.md              components, flow, identity, security
+│   ├── ENVIRONMENT.md               variables, secrets, ports, operations
+│   ├── DEMO_SCENARIOS.md            narrated five-scenario sequence
+│   └── decisions/0001-...md          accepted architecture rationale
+├── infra/buzz/compose.yml            loopback Buzz dependencies
+├── src/platform/
+│   ├── platform-setup.ts             one-time setup orchestration
+│   ├── platform-doctor.ts            prerequisite/config validation
+│   ├── platform-run.ts               all-in-one runtime orchestration
+│   ├── platform-bootstrap.ts         pinned upstream installer
+│   ├── buzz-secrets.ts               private identity/infra generation
+│   ├── buzz-seed.ts                  channels, profiles, memberships, messages
+│   └── provider-profiles.ts          agent/tool/provider definitions
+├── src/                              ACP bridge and Omnigent client
+├── mastercard_tools/                 deterministic synthetic tools
+├── test/                             bridge and platform tests
+└── artifacts/                        verified native screenshots
+```
+
+Generated identities, credentials, databases, sessions, agent YAML, logs, and workspaces live only under ignored `.local/`. Runtime state is summarized in `.local/platform/runtime-state.json`.
+
+## Troubleshooting
+
+Run the doctor first:
+
+```bash
+npm run doctor
+```
+
+Common issues:
+
+- **Buzz shows no Mastercard channels:** confirm `.env` contains the public key for the currently active Buzz identity, restart the platform, and join `http://127.0.0.1:8010`.
+- **A mention gets no response:** use the exact visible handle, check [the status page](http://127.0.0.1:8014/), then inspect `.local/logs/buzz-acp-<agent>.log`.
+- **Omnigent is unhealthy:** inspect `.local/logs/omnigent-server.log` and confirm the pinned installation with `omnigent --version`.
+- **Copilot is unavailable:** verify `gh auth status`, confirm that account has Copilot access, and rerun `npm run setup` to restore the SDK extra.
+- **Gemini fails:** use a newly issued API key, keep it in `.env` or the calling shell, and never print it during the demo.
+- **A port is already occupied:** stop the prior `npm run demo` terminal with `Ctrl-C` before starting another instance.
+
+## Reproducibility and verification
 
 - Buzz source: `1c8321cd08feb597f8bcff5195c21148fb3e98ed`
 - Omnigent source: `f2a670b348f7110bf4ea18b643bcd3852f1d9712`
-- Buzz container: `ghcr.io/block/buzz:sha-1c8321c`
-- generated identities, local credentials, databases, logs, and workspaces live under ignored `.local/`
-- runtime state is written to `.local/platform/runtime-state.json`
+- Buzz image: `ghcr.io/block/buzz:sha-1c8321c`
 
-The bootstrap verifies the upstream repository before checking out the pinned Buzz commit and installs Omnigent directly from its pinned official repository revision.
+The verified end-to-end route is:
 
-## Verification
-
-```bash
-npm test
-python3 -m unittest mastercard_tools.test_tools
-curl -fsS http://127.0.0.1:8011/_readiness
-curl -fsS http://127.0.0.1:8014/health
+```text
+signed Buzz mention
+→ upstream buzz-acp
+→ repository ACP bridge
+→ local Omnigent session and host
+→ named synthetic tool through the selected model harness
+→ signed reply in the originating Buzz thread
 ```
 
-The end-to-end path has been exercised with both `@NetworkOps` and `@TokenLaunch`: a signed Buzz mention created a local Omnigent session, invoked the required modeled tool through the Copilot harness, and published a signed reply into the originating Buzz thread.
-
-## Useful files
-
-- `src/platform/platform-bootstrap.ts` — pinned upstream bootstrap
-- `src/platform/platform-run.ts` — one-process local orchestrator
-- `src/platform/buzz-seed.ts` — identities, private channels, employee messages, and desktop enrollment
-- `src/platform/provider-profiles.ts` — Copilot/Gemini Omnigent agent profiles
-- `mastercard_tools/tools.py` — explicitly synthetic agent tools
-- `artifacts/buzz-tokenization-launch.png` — native Buzz Desktop proof
-
-Upstream contracts: [Buzz ACP lifecycle](https://github.com/block/buzz/tree/main/crates/buzz-acp), [Buzz CLI](https://github.com/block/buzz/tree/main/crates/buzz-cli), [Omnigent agents and hosts](https://github.com/omnigent-ai/omnigent), and the [GitHub Copilot SDK](https://github.com/github/copilot-sdk).
+Upstream references: [Buzz ACP](https://github.com/block/buzz/tree/main/crates/buzz-acp), [Buzz CLI](https://github.com/block/buzz/tree/main/crates/buzz-cli), [Omnigent](https://github.com/omnigent-ai/omnigent), and the [GitHub Copilot SDK](https://github.com/github/copilot-sdk).
