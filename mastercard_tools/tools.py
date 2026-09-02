@@ -49,8 +49,8 @@ def compare_authorization_health(
 
 def assess_fraud_cluster(merchant_id: str, window_minutes: int = 60) -> dict[str, Any]:
     """Assess one explicitly synthetic merchant cluster."""
-    if merchant_id != "mock-merchant-4821":
-        raise ValueError("merchant_id must reference the modeled merchant mock-merchant-4821")
+    if merchant_id != "DEMO-M-204":
+        raise ValueError("merchant_id must reference the modeled merchant DEMO-M-204")
     if not 5 <= window_minutes <= 1440:
         raise ValueError("window_minutes must be between 5 and 1440")
     return _result(
@@ -67,22 +67,29 @@ def assess_fraud_cluster(merchant_id: str, window_minutes: int = 60) -> dict[str
 
 def check_tokenization_readiness(requestor_id: str) -> dict[str, Any]:
     """Return deterministic certification gates for one synthetic requestor."""
-    if requestor_id != "mock-tr-1042":
-        raise ValueError("requestor_id must reference the modeled requestor mock-tr-1042")
+    if requestor_id != "TR-DEMO-781":
+        raise ValueError("requestor_id must reference the modeled requestor TR-DEMO-781")
     return _result(
         "tokenization-launch-003",
         requestor_id=requestor_id,
         passed_gates=["cryptogram validation", "lifecycle events", "token assurance"],
         blocked_gates=["issuer rollback rehearsal"],
+        gates=[
+            {"gate": "cryptogram validation", "status": "passed", "owner": "Token Engineering"},
+            {"gate": "lifecycle events", "status": "passed", "owner": "Digital Payments QA"},
+            {"gate": "token assurance", "status": "passed", "owner": "Risk Product"},
+            {"gate": "issuer rollback rehearsal", "status": "blocked", "owner": "Issuer Integration"},
+        ],
         readiness="conditional",
+        recommendation="NO_GO_PENDING_OWNER_APPROVAL",
         proposed_launch_window="2026-09-08T22:00:00Z",
     )
 
 
 def investigate_settlement_variance(batch_id: str) -> dict[str, Any]:
     """Return deterministic evidence for one synthetic settlement batch."""
-    if batch_id != "mock-settlement-775":
-        raise ValueError("batch_id must reference the modeled batch mock-settlement-775")
+    if batch_id != "SET-DEMO-042":
+        raise ValueError("batch_id must reference the modeled batch SET-DEMO-042")
     return _result(
         "settlement-variance-002",
         batch_id=batch_id,
@@ -96,8 +103,8 @@ def investigate_settlement_variance(batch_id: str) -> dict[str, Any]:
 
 def lookup_control_evidence(control_id: str) -> dict[str, Any]:
     """Return deterministic control evidence for one synthetic control."""
-    if control_id != "mock-control-AC-17":
-        raise ValueError("control_id must reference the modeled control mock-control-AC-17")
+    if control_id != "CTRL-DEMO-17":
+        raise ValueError("control_id must reference the modeled control CTRL-DEMO-17")
     return _result(
         "compliance-evidence-006",
         control_id=control_id,

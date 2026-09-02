@@ -11,14 +11,15 @@
     "buzz-omnigent-acp": "dist/src/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "demo": "node -e \"throw new Error('The mock browser demo is retired. Use npm run platform:up for the real Buzz + Omnigent platform.')\"",
-    "prototype": "npm run build && node dist/src/demo/all-server.js",
-    "demo:runtime": "npm run build && node dist/src/demo/runtime-server.js",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "demo": "npm run platform:up",
     "agents:gemini": "npm run build && node dist/src/platform/render-agents.js gemini .local/agents",
     "agents:copilot": "npm run build && node dist/src/platform/render-agents.js copilot .local/agents",
     "buzz:secrets": "npm run build && node dist/src/platform/buzz-secrets.js .local/buzz",
     "buzz:seed": "npm run build && node dist/src/platform/buzz-seed.js",
+    "platform:bootstrap": "npm run build && node dist/src/platform/platform-bootstrap.js",
+    "platform:up": "npm run build && node dist/src/platform/platform-run.js",
     "test": "npm run build && node --test dist/test/**/*.test.js",
     "start": "node dist/src/cli.js"
   },

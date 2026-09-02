@@ -128,13 +128,26 @@ export function extractChannelId(value: unknown): string | undefined {
   return undefined
 }
 
-export async function seedBuzz(): Promise<{ channels: Record<string, string>; seededMessages: string[] }> {
+export function normalizeDesktopPublicKey(value: string | undefined): string | undefined {
+  if (!value?.trim()) return undefined
+  const publicKey = value.trim().toLowerCase()
+  if (!isHex(publicKey, 64)) {
+    throw new Error('BUZZ_DESKTOP_PUBKEY must be a 64-character hexadecimal Buzz public key')
+  }
+  return publicKey
+}
+
+export async function seedBuzz(
+  desktopPublicKeyInput: string | undefined = process.env.BUZZ_DESKTOP_PUBKEY,
+): Promise<{ channels: Record<string, string>; seededMessages: string[]; desktopMemberEnrolled: boolean }> {
   const identities = await readIdentities()
   const state = await readSeedState()
+  const desktopPublicKey = normalizeDesktopPublicKey(desktopPublicKeyInput)
 
   for (const identityName of Object.keys(humanProfiles).filter((name) => name !== 'owner')) {
     await addRelayMember(identities[identityName]!.publicKey)
   }
+  if (desktopPublicKey) await addRelayMember(desktopPublicKey)
 
   for (const [identityName, profile] of Object.entries(humanProfiles)) {
     await setProfile(identities[identityName]!, profile)
@@ -154,6 +167,9 @@ export async function seedBuzz(): Promise<{ channels: Record<string, string>; se
     for (const member of channel.members) {
       await addChannelMember(identities.owner!, channelId, identities[member]!.publicKey, 'member')
     }
+    if (desktopPublicKey) {
+      await addChannelMember(identities.owner!, channelId, desktopPublicKey, 'member')
+    }
     if (!state.messagesSeeded.includes(channel.name)) {
       for (const message of channel.messages) {
         await sendMessage(identities[message.author]!, channelId, message.content)
@@ -163,7 +179,11 @@ export async function seedBuzz(): Promise<{ channels: Record<string, string>; se
     await writeSeedState(state)
   }
 
-  return { channels: state.channels, seededMessages: [...state.messagesSeeded] }
+  return {
+    channels: state.channels,
+    seededMessages: [...state.messagesSeeded],
+    desktopMemberEnrolled: Boolean(desktopPublicKey),
+  }
 }
 
 async function readIdentities(): Promise<Record<string, Keypair>> {
@@ -229,7 +249,7 @@ async function sendMessage(author: Keypair, channelId: string, content: string):
 }
 
 async function runBuzz(identity: Keypair, args: string[], authTag?: string): Promise<string> {
-  return run('buzz', args, {
+  return run(process.env.BUZZ_CLI?.trim() || 'buzz', args, {
     ...process.env,
     BUZZ_RELAY_URL: relayUrl,
     BUZZ_PRIVATE_KEY: identity.secretKey,

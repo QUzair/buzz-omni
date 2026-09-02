@@ -1,147 +1,144 @@
-# Buzz → self-hosted Omnigent
+# Local Buzz + Omnigent Mastercard POC
 
-A minimal proof of concept for invoking an Omnigent agent from an `@mention` in Buzz. It uses no cloud sandbox provider: the Omnigent server and host run on hardware you control, and the included agent uses macOS's built-in Seatbelt sandbox.
+This repository runs the actual [Buzz](https://github.com/block/buzz) relay/CLI/ACP stack and the actual [Omnigent](https://github.com/omnigent-ai/omnigent) server/host stack on one Mac. The demo surface is the installed Buzz Desktop client. Omnigent is the local agent runtime behind it, not a replacement chat UI.
+
+![Buzz Desktop showing a real TokenLaunch thread](artifacts/buzz-tokenization-launch.png)
+
+The operational evidence returned by the agent tools is deliberately synthetic. The collaboration transport, Nostr identities and signatures, membership-scoped channels, owner-attested agent identities, ACP listeners, Omnigent sessions, model harness, sandbox, tool calls, and threaded Buzz replies are live components.
+
+## Architecture
 
 ```text
-Buzz Desktop
-  └─ buzz-acp (mentions, channel queue, shared context)
-       └─ buzz-omnigent-acp (this ACP-over-stdio bridge)
-            └─ your Omnigent server
-                 └─ your Omnigent host/runner
-                      └─ macOS Seatbelt sandbox → Codex agent
+Buzz Desktop on macOS
+  └─ local Buzz relay :8010
+       └─ one upstream buzz-acp listener per agent/channel
+            └─ ACP-over-stdio bridge in this repository
+                 └─ local Omnigent server :8013
+                      └─ local Omnigent host/runner
+                           └─ macOS Seatbelt sandbox
+                                └─ Copilot SDK or Gemini harness
+                                     └─ modeled Mastercard tool
+                                          └─ signed threaded reply to Buzz
 ```
 
-The bridge creates one external-host Omnigent session for each ACP session, forwards the Buzz thread, streams the response, and publishes the final answer back to the triggering thread.
+No Daytona, E2B, Modal, hosted sandbox, public callback, or fake Buzz web client is used. The selected model provider still receives model prompts; the execution host, sandbox, tools, Buzz data, and Omnigent control plane stay local.
 
-## Local Mastercard operations demo
+## Run it
 
-The repository also includes a zero-credential Mastercard operations workspace with seven agents, five modeled channels, fictitious employee conversations, and deterministic mock tools. Both services bind to loopback only:
+Prerequisites:
+
+- macOS with Buzz Desktop installed
+- Node.js 20.11+, Docker Desktop, Rust/Cargo, Git, and `uv`
+- for the default provider, an authenticated local GitHub Copilot CLI
+
+Copy only the **public key** from **Buzz → Settings → Profile → Identity**. Never copy or expose the private key.
 
 ```bash
 npm install
-npm run demo
+npm run platform:bootstrap
+BUZZ_DESKTOP_PUBKEY=<64-character-public-key> MODEL_PROVIDER=copilot npm run demo
 ```
 
-- Buzz-faithful collaboration client: `http://127.0.0.1:8008/?demo=1&channel=network-operations`
-- Buzz Agents setup: `http://127.0.0.1:8008/?view=agents`
-- Self-hosted Omnigent-shaped mock runtime: `http://127.0.0.1:8009`
+`platform:bootstrap` is a one-time build/install of the pinned upstream revisions. `npm run demo` is the real platform launcher and is equivalent to `npm run platform:up`.
 
-The channel switcher demonstrates five different employee-steered workflows:
+In Buzz Desktop:
 
-- `#network-operations` — authorization-health investigation and incident drafting
-- `#fraud-intelligence` — card-testing and merchant-domain investigation with dual approval
-- `#tokenization-launch` — token-requestor certification and launch-gate readiness
-- `#merchant-growth` — approval-rate analysis and guarded experiment design
-- `#customer-triage` — issuer support routing across fraud and payments specialists
+1. Open the profile menu, expand **Community actions**, and choose **Add a community**.
+2. Choose **Join an existing community**.
+3. Enter `http://127.0.0.1:8010`.
+4. Open `#tokenization-launch` or another seeded channel.
+5. Mention the channel agent, for example: `@TokenLaunch use check_tokenization_readiness for TR-DEMO-781. Do not grant approval.`
 
-Every person, conversation, account, metric, and operational event in the demo is fictitious. Tools are explicitly labeled as mock, mutations are previews only, and sensitive controls require human approval.
+The public-key environment variable enrolls that existing Buzz identity in the relay and all five channels. It is not a secret. Enrollment persists in the local Docker volume, so subsequent runs can omit it unless the Buzz identity changes.
 
-The local shell follows the upstream Buzz desktop layout: native-style window chrome, the yellow-to-blue workspace sidebar, dense channel messages, a bottom composer, and a dedicated Agents view. Agent routing and mock-tool activity remain inside the conversation instead of occupying a separate operations dashboard.
+Press `Ctrl-C` in the launcher terminal to stop Omnigent, all ACP listeners, and the local Buzz containers cleanly.
 
-## Prerequisites
+## Switch model harnesses
 
-- macOS and Node.js 20.11+
-- Buzz Desktop with `buzz` and `buzz-acp` available
-- Omnigent installed locally
-- A Codex credential available to the Omnigent host process
-
-No Daytona, E2B, Modal, Docker, or public callback URL is involved.
-
-## 1. Install the bridge
+Copilot is the default and uses the local Copilot CLI/SDK authentication already present on the machine:
 
 ```bash
-npm install
-npm test
-npm link
+MODEL_PROVIDER=copilot npm run demo
 ```
 
-`npm link` places `buzz-omnigent-acp` on `PATH` so Buzz can launch it as a custom harness.
-
-## 2. Start your Omnigent server and host
-
-From this repository, start Omnigent on loopback and register the included agent:
+Gemini is an alternate Omnigent harness. Keep its key in the calling shell; the platform does not write it to the repository or generated configuration:
 
 ```bash
-pip install omnigent
-export OPENAI_API_KEY='...'
-
-omnigent server \
-  --host 127.0.0.1 \
-  --port 6767 \
-  --agent "$PWD/agents/market-strategy.yaml"
+export GEMINI_API_KEY='your-rotated-key'
+MODEL_PROVIDER=gemini npm run demo
 ```
 
-In a second terminal, attach this Mac as an Omnigent execution host:
+If a key has ever been pasted into a chat or screenshot, revoke it and issue a new one before use.
 
-```bash
-omnigent host http://127.0.0.1:6767 --background
-omnigent host status --server http://127.0.0.1:6767 --json
-```
+## Live local ports
 
-Copy `host_id` from the status output. Open `http://127.0.0.1:6767`, find `mastercard_market_strategy`, and copy its agent ID. Choose an existing absolute directory on this Mac for agent work; for a disposable POC, create a dedicated empty directory.
+| Port | Component |
+| ---: | --- |
+| `8010` | Buzz HTTP/WebSocket relay |
+| `8011` | Buzz readiness endpoint |
+| `8012` | Buzz Prometheus metrics |
+| `8013` | Omnigent API and optional session inspection UI |
+| `8014` | Read-only platform status page |
 
-The YAML in [`agents/market-strategy.yaml`](./agents/market-strategy.yaml) explicitly selects `darwin_seatbelt`, limits writes to the session workspace, and blocks network access from sandboxed OS tools. Model API access remains in the Omnigent/Codex harness process.
+All published ports bind to `127.0.0.1`.
 
-To run the host on another Mac you own, run `omnigent host https://your-own-omnigent-server --background` there and use that host's ID and workspace path. Use HTTPS whenever the server is not loopback-only.
+## Mastercard triage communities
 
-## 3. Register the custom harness in Buzz
-
-In Buzz Desktop, open **Settings → Agent runtimes → Add custom harness** and enter:
-
-- ID: `omnigent`
-- Label: `Mastercard Omnigent`
-- Command: `buzz-omnigent-acp`
-- Environment:
-  - `OMNIGENT_BASE_URL=http://127.0.0.1:6767`
-  - `OMNIGENT_AGENT_ID=ag_…`
-  - `OMNIGENT_HOST_ID=<host_id from the status command>`
-  - `OMNIGENT_WORKSPACE=/absolute/path/to/agent-workspace`
-
-The equivalent JSON is in [`config/buzz-custom-harness.example.json`](./config/buzz-custom-harness.example.json).
-
-Create a Buzz agent using the **Mastercard Omnigent** runtime, add it to a channel, then send:
-
-```text
-@Market Strategy compare Germany and France for our first launch.
-```
-
-Buzz detects the mention, serializes turns per channel, and supplies thread context. The bridge asks Omnigent to bind the session to your configured host, waits for the sandboxed turn, then posts a threaded Buzz reply.
-
-## Configuration
-
-| Variable | Required | Meaning |
+| Buzz channel | Agent | Modeled tool behavior |
 | --- | --- | --- |
-| `OMNIGENT_BASE_URL` | yes | Omnigent API URL. Non-loopback URLs must use HTTPS. |
-| `OMNIGENT_AGENT_ID` | yes | Registered Omnigent agent ID. |
-| `OMNIGENT_HOST_ID` | yes | UUID of the host/runner machine you control. |
-| `OMNIGENT_WORKSPACE` | yes | Absolute workspace path on that host. |
-| `OMNIGENT_API_TOKEN` | no | Bearer-token override; otherwise the bridge reads Omnigent's local token store. |
-| `BUZZ_CLI` | no | Buzz executable; defaults to `buzz`. |
-| `BRIDGE_MAX_PROMPT_BYTES` | no | Maximum ACP prompt size; defaults to 128 KiB. |
-| `BRIDGE_TURN_TIMEOUT_MS` | no | Hard turn deadline; defaults to 15 minutes. |
+| `#network-operations` | `@NetworkOps` | Compares authorization health by corridor and isolates likely fault domains. |
+| `#fraud-intelligence` | `@FraudReview` | Reviews synthetic suspicious activity and returns approval-gated controls. |
+| `#tokenization-launch` | `@TokenLaunch` | Checks certification gates, blockers, owners, and go/no-go status. |
+| `#settlement-operations` | `@SettlementOps` | Traces modeled batch variance without changing settlement state. |
+| `#compliance-evidence` | `@ComplianceReview` | Inventories synthetic control evidence and distinguishes gaps from failures. |
 
-## POC boundaries
+The seeded employees and conversations are fictitious. Write-like tools produce previews or recommendations only; they do not touch Mastercard systems or grant operational approval.
 
-- One ACP session maps to one self-hosted Omnigent session; Buzz owns per-channel serialization.
-- Answers are posted after the turn completes. ACP deltas are emitted for observability but are not posted as partial messages.
-- Interactive Omnigent approvals are not bridged; the demo agent must not require an approval UI.
-- Token refresh and Omnigent-session cleanup are not automated yet.
-- The sample agent targets macOS. On a Linux host, change the sandbox type to Omnigent's `linux_bwrap` and install its local OS prerequisite.
+## What is real and what is modeled
 
-## Security notes
+Real:
 
-- Buzz content is length-limited and forwarded only as user input.
-- Channel UUIDs and reply event IDs are structurally validated.
-- Buzz publishing uses an argument array and stdin, never a shell.
-- Host ID and workspace are explicit; the bridge cannot ask Omnigent to provision vendor infrastructure.
-- The workspace must be absolute, remote cleartext HTTP is rejected, and server error bodies are not exposed.
+- upstream Buzz relay, `buzz` CLI, `buzz-acp`, and the installed Buzz Desktop app
+- signed Nostr messages, relay membership, private channel membership, and NIP-OA owner attestations
+- upstream Omnigent server, SQLite session state, local host/runner, provider harness, and macOS Seatbelt sandbox
+- five concurrent agent listeners, session creation, tool dispatch, and signed threaded responses
 
-## Upstream contracts
+Modeled:
 
-- [Buzz custom ACP harness and mention lifecycle](https://github.com/block/buzz/blob/main/crates/buzz-acp/README.md)
-- [Buzz CLI message publishing](https://github.com/block/buzz/blob/main/crates/buzz-cli/README.md)
-- [Omnigent external hosts](https://github.com/omnigent-ai/omnigent/blob/main/README.md#connect-another-machine)
-- [Omnigent agent YAML and OS sandbox](https://github.com/omnigent-ai/omnigent/blob/main/docs/AGENT_YAML_SPEC.md#os-environment-os_env)
-- [Omnigent session API](https://github.com/omnigent-ai/omnigent/blob/main/openapi.json)
-- [Mastercard services and operating domains](https://www.mastercard.com/content/mccom/global/en/business/services.html)
-- [Mastercard branding requirements and digital color specifications](https://www.mastercard.com/content/brandcenter/ca/en/brand-requirements/mastercard.html)
+- Mastercard employees, accounts, corridors, control IDs, and operational scenarios
+- Python tool return values in `mastercard_tools/`
+- approval and mutation outcomes, which remain non-executing previews
+
+Buzz's private channels are membership-scoped. This POC does not claim end-to-end encryption.
+
+## Reproducibility and state
+
+- Buzz source: `1c8321cd08feb597f8bcff5195c21148fb3e98ed`
+- Omnigent source: `f2a670b348f7110bf4ea18b643bcd3852f1d9712`
+- Buzz container: `ghcr.io/block/buzz:sha-1c8321c`
+- generated identities, local credentials, databases, logs, and workspaces live under ignored `.local/`
+- runtime state is written to `.local/platform/runtime-state.json`
+
+The bootstrap verifies the upstream repository before checking out the pinned Buzz commit and installs Omnigent directly from its pinned official repository revision.
+
+## Verification
+
+```bash
+npm test
+python3 -m unittest mastercard_tools.test_tools
+curl -fsS http://127.0.0.1:8011/_readiness
+curl -fsS http://127.0.0.1:8014/health
+```
+
+The end-to-end path has been exercised with both `@NetworkOps` and `@TokenLaunch`: a signed Buzz mention created a local Omnigent session, invoked the required modeled tool through the Copilot harness, and published a signed reply into the originating Buzz thread.
+
+## Useful files
+
+- `src/platform/platform-bootstrap.ts` — pinned upstream bootstrap
+- `src/platform/platform-run.ts` — one-process local orchestrator
+- `src/platform/buzz-seed.ts` — identities, private channels, employee messages, and desktop enrollment
+- `src/platform/provider-profiles.ts` — Copilot/Gemini Omnigent agent profiles
+- `mastercard_tools/tools.py` — explicitly synthetic agent tools
+- `artifacts/buzz-tokenization-launch.png` — native Buzz Desktop proof
+
+Upstream contracts: [Buzz ACP lifecycle](https://github.com/block/buzz/tree/main/crates/buzz-acp), [Buzz CLI](https://github.com/block/buzz/tree/main/crates/buzz-cli), [Omnigent agents and hosts](https://github.com/omnigent-ai/omnigent), and the [GitHub Copilot SDK](https://github.com/github/copilot-sdk).

@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { agentIdentityNames, channelCatalog, extractChannelId, humanProfiles } from '../src/platform/buzz-seed.js'
+import {
+  agentIdentityNames,
+  channelCatalog,
+  extractChannelId,
+  humanProfiles,
+  normalizeDesktopPublicKey,
+} from '../src/platform/buzz-seed.js'
 
 test('models distinct private triage communities with real employee steering', () => {
   assert.equal(channelCatalog.length, 5)
@@ -22,4 +28,11 @@ test('extracts only structurally valid channel UUIDs from Buzz output', () => {
   assert.equal(extractChannelId([{ channel_id: id }]), id)
   assert.equal(extractChannelId({ id: 'not-a-uuid' }), undefined)
   assert.equal(extractChannelId({ event_id: 'a'.repeat(64) }), undefined)
+})
+
+test('accepts only a canonical Buzz Desktop public key for community enrollment', () => {
+  const publicKey = 'AB'.repeat(32)
+  assert.equal(normalizeDesktopPublicKey(`  ${publicKey}  `), publicKey.toLowerCase())
+  assert.equal(normalizeDesktopPublicKey('  '), undefined)
+  assert.throws(() => normalizeDesktopPublicKey('not-a-key'), /64-character hexadecimal/)
 })

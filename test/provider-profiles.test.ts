@@ -26,6 +26,8 @@ test('every provider retains the same sandbox and modeled tool contract', () => 
     assert.match(yaml, /type: darwin_seatbelt/)
     assert.match(yaml, /allow_network: false/)
     assert.match(yaml, /callable: mastercard_tools\.tools\.compare_authorization_health/)
+    assert.match(yaml, /MUST call compare_authorization_health/)
+    assert.match(yaml, /Never substitute built-in SQL, shell, filesystem, web, or todo tools/)
     assert.match(yaml, /SYNTHETIC_MODELED_DATA/)
     assert.doesNotMatch(yaml, /spec_version:/)
   }
