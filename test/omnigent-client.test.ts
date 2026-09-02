@@ -9,6 +9,7 @@ const config: BridgeConfig = {
   omnigentHostId: '550e8400-e29b-41d4-a716-446655440000',
   omnigentWorkspace: '/srv/omni-agent',
   buzzCli: 'buzz',
+  buzzRelayUrl: 'https://buzz.example',
   maxPromptBytes: 1000,
   turnTimeoutMs: 5_000,
 }

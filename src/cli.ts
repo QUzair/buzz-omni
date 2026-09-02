@@ -6,7 +6,7 @@ import { OmnigentClient } from './omnigent-client.js'
 
 try {
   const config = readConfig()
-  new AcpServer(config, new OmnigentClient(config), createBuzzPublisher(config.buzzCli)).run()
+  new AcpServer(config, new OmnigentClient(config), createBuzzPublisher(config.buzzCli, config.buzzRelayUrl)).run()
 } catch (error) {
   const message = error instanceof Error ? error.message : 'Invalid bridge configuration'
   console.error(`[buzz-omnigent-acp] ${message}`)

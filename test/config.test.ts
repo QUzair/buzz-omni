@@ -8,6 +8,12 @@ test('accepts HTTPS Omnigent servers and local HTTP development', () => {
   assert.equal(readConfig({ ...shared, OMNIGENT_BASE_URL: 'http://localhost:8000' }).omnigentBaseUrl, 'http://localhost:8000')
 })
 
+test('uses an HTTP relay endpoint when buzz-acp subscribes over WebSocket', () => {
+  const shared = { OMNIGENT_BASE_URL: 'http://localhost:8000', OMNIGENT_AGENT_ID: 'ag_1', OMNIGENT_HOST_ID: '550e8400e29b41d4a716446655440000', OMNIGENT_WORKSPACE: '/srv/omni-agent' }
+  assert.equal(readConfig({ ...shared, BUZZ_RELAY_URL: 'ws://127.0.0.1:8010' }).buzzRelayUrl, 'http://127.0.0.1:8010')
+  assert.equal(readConfig({ ...shared, BUZZ_HTTP_RELAY_URL: 'http://localhost:8010' }).buzzRelayUrl, 'http://localhost:8010')
+})
+
 test('rejects cleartext remote Omnigent servers', () => {
   assert.throws(() => readConfig({ OMNIGENT_BASE_URL: 'http://omni.example', OMNIGENT_AGENT_ID: 'ag_1', OMNIGENT_HOST_ID: '550e8400-e29b-41d4-a716-446655440000', OMNIGENT_WORKSPACE: '/srv/omni-agent' }), /HTTPS/)
 })

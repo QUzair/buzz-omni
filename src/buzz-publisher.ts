@@ -8,13 +8,17 @@ export type PublishInput = {
 
 export type Publisher = (input: PublishInput, signal?: AbortSignal) => Promise<void>
 
-export function createBuzzPublisher(command: string): Publisher {
+export function createBuzzPublisher(command: string, relayUrl?: string): Publisher {
   return async ({ channelId, replyTo, content }, signal) => {
     const args = ['messages', 'send', '--channel', channelId, '--content', '-']
     if (replyTo) args.push('--reply-to', replyTo)
 
     await new Promise<void>((resolve, reject) => {
-      const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], signal })
+      const child = spawn(command, args, {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        signal,
+        env: relayUrl ? { ...process.env, BUZZ_RELAY_URL: relayUrl } : process.env,
+      })
       let stderr = ''
       child.stderr.setEncoding('utf8')
       child.stderr.on('data', (chunk: string) => { if (stderr.length < 4_096) stderr += chunk })

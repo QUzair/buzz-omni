@@ -5,6 +5,7 @@ export type BridgeConfig = {
   omnigentWorkspace: string
   omnigentApiToken?: string
   buzzCli: string
+  buzzRelayUrl?: string
   maxPromptBytes: number
   turnTimeoutMs: number
 }
@@ -43,9 +44,20 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
     omnigentWorkspace,
     omnigentApiToken: env.OMNIGENT_API_TOKEN?.trim() || readStoredToken(parsedUrl.toString()),
     buzzCli: env.BUZZ_CLI?.trim() || 'buzz',
+    buzzRelayUrl: resolveBuzzHttpRelay(env),
     maxPromptBytes: positiveInteger(env.BRIDGE_MAX_PROMPT_BYTES, 128 * 1024, 'BRIDGE_MAX_PROMPT_BYTES'),
     turnTimeoutMs: positiveInteger(env.BRIDGE_TURN_TIMEOUT_MS, 15 * 60 * 1000, 'BRIDGE_TURN_TIMEOUT_MS'),
   }
+}
+
+function resolveBuzzHttpRelay(env: NodeJS.ProcessEnv): string | undefined {
+  const raw = env.BUZZ_HTTP_RELAY_URL?.trim() || env.BUZZ_RELAY_URL?.trim()
+  if (!raw) return undefined
+  const parsed = new URL(raw)
+  if (parsed.protocol === 'ws:') parsed.protocol = 'http:'
+  if (parsed.protocol === 'wss:') parsed.protocol = 'https:'
+  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('BUZZ_HTTP_RELAY_URL must use HTTP or HTTPS')
+  return parsed.toString().replace(/\/$/, '')
 }
 
 function readStoredToken(serverUrl: string): string | undefined {
