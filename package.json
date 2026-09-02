@@ -13,12 +13,16 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "npm run clean && tsc -p tsconfig.json",
+    "setup": "npm run platform:setup",
+    "doctor": "npm run platform:doctor",
     "demo": "npm run platform:up",
     "agents:gemini": "npm run build && node dist/src/platform/render-agents.js gemini .local/agents",
     "agents:copilot": "npm run build && node dist/src/platform/render-agents.js copilot .local/agents",
     "buzz:secrets": "npm run build && node dist/src/platform/buzz-secrets.js .local/buzz",
     "buzz:seed": "npm run build && node dist/src/platform/buzz-seed.js",
     "platform:bootstrap": "npm run build && node dist/src/platform/platform-bootstrap.js",
+    "platform:setup": "npm run build && node dist/src/platform/platform-setup.js",
+    "platform:doctor": "npm run build && node dist/src/platform/platform-doctor.js",
     "platform:up": "npm run build && node dist/src/platform/platform-run.js",
     "test": "npm run build && node --test dist/test/**/*.test.js",
     "start": "node dist/src/cli.js"

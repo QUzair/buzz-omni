@@ -9,6 +9,7 @@ import { agentDefinitions } from './provider-profiles.js'
 import { renderAgentProfiles } from './render-agents.js'
 import { createBuzzSecrets } from './buzz-secrets.js'
 import { channelCatalog, seedBuzz, type AgentIdentity } from './buzz-seed.js'
+import { loadPlatformEnvironment, readPlatformOptions } from './platform-env.js'
 
 const execFile = promisify(execFileCallback)
 const root = resolve('.')
@@ -111,10 +112,10 @@ type RuntimeStatus = {
 }
 
 async function runPlatform(): Promise<void> {
-  const provider = (process.env.MODEL_PROVIDER || 'copilot').trim().toLowerCase()
-  if (provider === 'gemini' && !process.env.GEMINI_API_KEY?.trim()) {
-    throw new Error('GEMINI_API_KEY must be set in the shell for MODEL_PROVIDER=gemini')
-  }
+  const loadedEnvironment = await loadPlatformEnvironment()
+  const runtimeEnvironment = loadedEnvironment.environment
+  const options = readPlatformOptions(runtimeEnvironment)
+  const provider = options.provider
   await requireExecutable(buzzAcpPath, 'Run npm run platform:bootstrap to build the pinned upstream buzz-acp binary')
   await requireExecutable(buzzCliPath, 'Run npm run platform:bootstrap to build the pinned upstream Buzz CLI')
   process.env.BUZZ_CLI = buzzCliPath
@@ -128,7 +129,7 @@ async function runPlatform(): Promise<void> {
   try {
     await exec('docker', [...composeArgs, 'up', '-d', '--wait'])
     await waitForHealth(`${relayHttpUrl.replace(':8010', ':8011')}/_readiness`, 45_000)
-    const seed = await seedBuzz(process.env.BUZZ_DESKTOP_PUBKEY)
+    const seed = await seedBuzz(options.desktopPublicKey)
 
     const omnigentLog = openSync(resolve(logsRoot, 'omnigent-server.log'), 'w', 0o600)
     const server = spawn('omnigent', [
@@ -136,12 +137,12 @@ async function runPlatform(): Promise<void> {
       '--database-uri', `sqlite:///${resolve(localRoot, 'omnigent/chat.db')}`,
       '--artifact-location', resolve(localRoot, 'omnigent/artifacts'),
       ...agentPaths.flatMap((path) => ['--agent', path]), '--no-open',
-    ], { cwd: root, env: { ...process.env, PYTHONPATH: root }, stdio: ['ignore', omnigentLog, omnigentLog] })
+    ], { cwd: root, env: { ...runtimeEnvironment, PYTHONPATH: root }, stdio: ['ignore', omnigentLog, omnigentLog] })
     closeSync(omnigentLog)
     children.push(server)
     await waitForHealth(`${omnigentUrl}/health`, 60_000)
 
-    await exec('omnigent', ['host', omnigentUrl, '--background', '--non-interactive'], { ...process.env, PYTHONPATH: root })
+    await exec('omnigent', ['host', omnigentUrl, '--background', '--non-interactive'], { ...runtimeEnvironment, PYTHONPATH: root })
     const hostId = await waitForOmnigentHost(60_000)
     const identities = await loadIdentities()
     const seedState = await loadSeedState()
@@ -157,7 +158,7 @@ async function runPlatform(): Promise<void> {
       const log = openSync(resolve(logsRoot, `buzz-acp-${runtime.agentSlug}.log`), 'w', 0o600)
       const child = spawn(buzzAcpPath, [], {
         cwd: root,
-        env: buildAgentEnvironment(runtime, { identities, authTag, omnigentAgentId: agentId, omnigentHostId: hostId, workspace, bridgePath }),
+        env: buildAgentEnvironment(runtime, { identities, authTag, omnigentAgentId: agentId, omnigentHostId: hostId, workspace, bridgePath }, runtimeEnvironment),
         stdio: ['ignore', log, log],
       })
       closeSync(log)
@@ -187,11 +188,20 @@ async function runPlatform(): Promise<void> {
       `Omnigent UI:     ${omnigentUrl}`,
       `Platform status: http://127.0.0.1:${statusPort}`,
       `Provider:        ${provider}`,
+      `Environment:     ${loadedEnvironment.loaded ? loadedEnvironment.path : 'shell/defaults (.env not found)'}`,
       `Communities:     ${communityProcesses.length} private Buzz channels`,
       `Buzz Desktop:    ${seed.desktopMemberEnrolled ? 'public key enrolled' : 'set BUZZ_DESKTOP_PUBKEY to enroll a fresh client'}`,
       'Press Ctrl-C to stop the local platform.',
       '',
     ].join('\n'))
+
+    if (options.openBuzzDesktop) {
+      try {
+        await exec('open', ['-a', 'Buzz'], runtimeEnvironment)
+      } catch {
+        process.stderr.write('[platform] Buzz Desktop could not be opened automatically; open /Applications/Buzz.app manually.\n')
+      }
+    }
 
     await waitForShutdown(children, statusServer)
   } catch (error) {
