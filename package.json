@@ -18,6 +18,7 @@
     "agents:gemini": "npm run build && node dist/src/platform/render-agents.js gemini .local/agents",
     "agents:copilot": "npm run build && node dist/src/platform/render-agents.js copilot .local/agents",
     "buzz:secrets": "npm run build && node dist/src/platform/buzz-secrets.js .local/buzz",
+    "buzz:seed": "npm run build && node dist/src/platform/buzz-seed.js",
     "test": "npm run build && node --test dist/test/**/*.test.js",
     "start": "node dist/src/cli.js"
   },
