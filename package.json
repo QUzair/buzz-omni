@@ -17,6 +17,7 @@
     "demo:runtime": "npm run build && node dist/src/demo/runtime-server.js",
     "agents:gemini": "npm run build && node dist/src/platform/render-agents.js gemini .local/agents",
     "agents:copilot": "npm run build && node dist/src/platform/render-agents.js copilot .local/agents",
+    "buzz:secrets": "npm run build && node dist/src/platform/buzz-secrets.js .local/buzz",
     "test": "npm run build && node --test dist/test/**/*.test.js",
     "start": "node dist/src/cli.js"
   },
