@@ -21,13 +21,9 @@ export class OmnigentClient {
   }
 
   async createSession(title?: string): Promise<string> {
-    // Omnigent external-host sessions bind the runner to infrastructure the operator owns.
-    // https://github.com/omnigent-ai/omnigent/blob/main/omnigent/server/routes/sessions/routes_core.py
     const body: JsonObject = {
       agent_id: this.config.omnigentAgentId,
-      host_type: 'external',
-      host_id: this.config.omnigentHostId,
-      workspace: this.config.omnigentWorkspace,
+      initial_items: [],
     }
     if (title) body.title = title.slice(0, 160)
 
@@ -39,6 +35,15 @@ export class OmnigentClient {
     const payload = await response.json() as JsonObject
     const id = [payload.id, payload.session_id, payload.conversation_id].find((value): value is string => typeof value === 'string' && value.length > 0)
     if (!id) throw new Error('Omnigent create-session response did not contain a session id')
+
+    await this.expectOk(await this.request(
+      `${this.config.omnigentBaseUrl}/v1/hosts/${encodeURIComponent(this.config.omnigentHostId)}/runners`,
+      {
+        method: 'POST',
+        headers: this.headers({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ session_id: id, workspace: this.config.omnigentWorkspace }),
+      },
+    ), 'Start self-hosted Omnigent runner')
     return id
   }
 
@@ -76,8 +81,9 @@ export class OmnigentClient {
         break
       } else if (type === 'response.failed' || type === 'turn.failed' || type === 'response.cancelled' || type === 'turn.cancelled') {
         throw new Error(`Omnigent turn ended with ${String(type)}`)
-      } else if (type === 'session.status' && started && (event.status === 'idle' || event.status === 'failed')) {
-        if (event.status === 'failed') throw new Error('Omnigent session reported a failed turn')
+      } else if (type === 'session.status' && event.status === 'failed') {
+        throw new Error('Omnigent session reported a failed turn')
+      } else if (type === 'session.status' && started && event.status === 'idle') {
         break
       }
     }
