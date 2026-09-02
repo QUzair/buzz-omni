@@ -12,8 +12,11 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "demo": "npm run build && node dist/src/demo/all-server.js",
+    "demo": "node -e \"throw new Error('The mock browser demo is retired. Use npm run platform:up for the real Buzz + Omnigent platform.')\"",
+    "prototype": "npm run build && node dist/src/demo/all-server.js",
     "demo:runtime": "npm run build && node dist/src/demo/runtime-server.js",
+    "agents:gemini": "npm run build && node dist/src/platform/render-agents.js gemini .local/agents",
+    "agents:copilot": "npm run build && node dist/src/platform/render-agents.js copilot .local/agents",
     "test": "npm run build && node --test dist/test/**/*.test.js",
     "start": "node dist/src/cli.js"
   },
