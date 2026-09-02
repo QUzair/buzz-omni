@@ -37,6 +37,7 @@ const identityNames = [
   'tokenization_readiness',
   'settlement_support',
   'compliance_review',
+  'release_helper',
 ] as const
 
 export function parseBuzzKeypair(output: string): BuzzKeypair {
@@ -87,10 +88,14 @@ export async function createBuzzSecrets(
 
   let state: BuzzSecretState
   let created = false
+  let existingContent: string | undefined
   try {
-    state = validateState(JSON.parse(await readFile(statePath, 'utf8')) as unknown)
+    existingContent = await readFile(statePath, 'utf8')
   } catch (error) {
-    if (error instanceof SyntaxError) throw new Error('Local Buzz identity state is malformed; refusing to overwrite it')
+    if (!isMissingFile(error)) throw error
+  }
+
+  if (existingContent === undefined) {
     const identities: Record<string, BuzzKeypair> = {}
     for (const name of identityNames) identities[name] = await generateKeypair()
     const owner = identities.owner
@@ -110,6 +115,22 @@ export async function createBuzzSecrets(
     }
     await atomicWrite(statePath, `${JSON.stringify(state, null, 2)}\n`, 0o600)
     created = true
+  } else {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(existingContent) as unknown
+    } catch {
+      throw new Error('Local Buzz identity state is malformed; refusing to overwrite it')
+    }
+    state = validateState(parsed)
+    const missing = identityNames.filter((name) => !state.identities[name])
+    if (missing.includes('owner')) {
+      throw new Error('Local Buzz identity state has no owner; refusing to rotate identities')
+    }
+    for (const name of missing) state.identities[name] = await generateKeypair()
+    if (missing.length > 0) {
+      await atomicWrite(statePath, `${JSON.stringify(state, null, 2)}\n`, 0o600)
+    }
   }
 
   await atomicWrite(envPath, renderBuzzEnv(state.infra), 0o600)
@@ -128,13 +149,18 @@ function validateState(raw: unknown): BuzzSecretState {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('missing state')
   const state = raw as Partial<BuzzSecretState>
   if (state.version !== 1 || !state.identities || !state.infra) throw new Error('missing state')
-  for (const name of identityNames) {
-    const pair = state.identities[name]
+  for (const [name, pair] of Object.entries(state.identities)) {
     if (!pair || !/^[0-9a-f]{64}$/.test(pair.publicKey) || !/^[0-9a-f]{64}$/.test(pair.secretKey)) {
       throw new Error(`invalid local identity: ${name}`)
     }
   }
+  const owner = state.identities.owner
+  if (!owner || state.infra.ownerPublicKey !== owner.publicKey) throw new Error('invalid local identity: owner')
   return state as BuzzSecretState
+}
+
+function isMissingFile(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && error.code === 'ENOENT'
 }
 
 async function atomicWrite(path: string, content: string, mode: number): Promise<void> {

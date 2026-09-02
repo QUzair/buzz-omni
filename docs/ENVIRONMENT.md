@@ -16,7 +16,7 @@ The loader accepts blank lines, comments, `NAME=value`, and single- or double-qu
 
 | Variable | Default | Secret | Purpose |
 | --- | --- | --- | --- |
-| `MODEL_PROVIDER` | `copilot` | no | Selects `copilot` or `gemini` for all five generated Omnigent agent profiles. |
+| `MODEL_PROVIDER` | `copilot` | no | Selects `copilot` or `gemini` for all six generated Omnigent agent profiles. |
 | `BUZZ_DESKTOP_PUBKEY` | unset | no | Enrolls an existing Buzz Desktop identity in the relay and seeded private channels. Must be 64 hexadecimal characters. |
 | `GEMINI_API_KEY` | unset | **yes** | Required only when `MODEL_PROVIDER=gemini`. Passed to Omnigent through the process environment and never written into agent YAML. |
 | `OPEN_BUZZ_DESKTOP` | `true` | no | Opens `/Applications/Buzz.app` after all services and listeners are ready. |
@@ -35,7 +35,7 @@ Place the public key in `.env`:
 BUZZ_DESKTOP_PUBKEY=your-64-character-public-key
 ```
 
-The platform adds that identity to the relay, all five private channels, each agent's signed remote-directory policy, and each live listener's explicit author allowlist. This lets the enrolled employee discover and invoke `@NetworkOps`, `@FraudReview`, `@TokenLaunch`, `@SettlementOps`, and `@ComplianceReview`; the named agent manager remains its owner/attestor rather than its exclusive caller. Membership and directory policy persist in the local Buzz Docker volume. If Buzz Desktop creates a new identity, update the value, restart the platform, and relaunch Buzz to refresh its directory cache.
+The platform adds that identity to the relay, all six private channels, each agent's signed remote-directory policy, and each live listener's explicit author allowlist. This lets the enrolled employee discover and invoke `@NetworkOps`, `@FraudReview`, `@TokenLaunch`, `@SettlementOps`, `@ComplianceReview`, and `@ReleaseHelper`; the named agent manager remains its owner/attestor rather than its exclusive caller. Membership and directory policy persist in the local Buzz Docker volume. If Buzz Desktop creates a new identity, update the value, restart the platform, and relaunch Buzz to refresh its directory cache.
 
 ## Copilot mode
 
@@ -68,6 +68,7 @@ Never commit `.env`, paste a production key into chat, or reuse a key that has b
 | `8012` | Buzz Prometheus metrics |
 | `8013` | Omnigent API and optional runtime inspection UI |
 | `8014` | Read-only platform status page |
+| `8015` | Stateful synthetic release candidate and staging surface |
 
 The ports are intentionally fixed for a predictable POC and all bind to `127.0.0.1`. Startup fails closed if a required port is unavailable.
 
@@ -91,13 +92,14 @@ npm test
 python3 -m unittest mastercard_tools.test_tools
 ```
 
-Stop the foreground platform with `Ctrl-C`. The orchestrator terminates Omnigent, all five ACP listeners, and the Docker Compose services. Persistent local volumes and `.local/` state remain for the next run.
+Stop the foreground platform with `Ctrl-C`. The orchestrator terminates Omnigent, all six ACP listeners, the release surface, and the Docker Compose services. Persistent local volumes and `.local/` state remain for the next run.
 
 Useful diagnostics:
 
 ```bash
 curl -fsS http://127.0.0.1:8011/_readiness
 curl -fsS http://127.0.0.1:8014/health
+curl -fsS http://127.0.0.1:8015/health
 ls .local/logs
 ```
 

@@ -103,7 +103,12 @@ export class AcpServer {
       route = parseBuzzRoute(prompt)
       const answer = await this.omnigent.runTurn(session.omnigentId, prompt, (delta) => {
         this.write({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: session.omnigentId, update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: delta } } } })
-      }, session.abort?.signal)
+      }, session.abort?.signal, (activity) => {
+        const update = activity.type === 'tool_started'
+          ? { sessionUpdate: 'tool_call', toolCallId: activity.callId, title: activity.name, kind: 'other', status: 'in_progress' }
+          : { sessionUpdate: 'tool_call_update', toolCallId: activity.callId, status: 'completed' }
+        this.write({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: session.omnigentId, update } })
+      })
       if (!answer) throw new Error('Omnigent completed without response text')
       await this.publish({ ...route, content: answer }, session.abort?.signal)
       this.writeResult(id, { stopReason: 'end_turn' })

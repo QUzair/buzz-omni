@@ -1,12 +1,12 @@
 # Demo Scenarios and Sequence
 
-This runbook is designed for a 12–15 minute architecture demonstration. The people, identifiers, metrics, and operational evidence are fictitious. The software path is real.
+This runbook is designed for a 15–18 minute architecture demonstration. The people, identifiers, metrics, and operational evidence are fictitious. The software path is real.
 
 ## Before the room joins
 
 1. Complete the one-time setup and configure `.env`.
 2. Run `npm run doctor`; every required check should be green.
-3. Run `npm run demo` and leave the terminal visible until it reports five private Buzz channels.
+3. Run `npm run demo` and leave the terminal visible until it reports six private Buzz channels.
 4. Confirm [the status page](http://127.0.0.1:8014/) shows Buzz and Omnigent as ready.
 5. In Buzz Desktop, join `http://127.0.0.1:8010` once if it is not already listed.
 6. Open `#network-operations` and keep the channel list visible.
@@ -15,7 +15,7 @@ Do not open the Omnigent UI as the primary experience. Buzz is the collaboration
 
 ## Act 1 — establish the architecture (2 minutes)
 
-Show the five locked Buzz channels and explain:
+Show the six locked Buzz channels and explain:
 
 - employee and agent messages are signed identities on the real local relay;
 - several employee personas contribute context in each channel;
@@ -23,7 +23,7 @@ Show the five locked Buzz channels and explain:
 - Omnigent owns the model, sandbox, session, and tools behind that stable Buzz identity;
 - every operational result is synthetic and every consequential action remains human-controlled.
 
-Use the status page briefly to show five live listeners, then return to Buzz.
+Use the status page briefly to show six live listeners, then return to Buzz.
 
 ## Act 2 — network incident triage (3 minutes)
 
@@ -118,7 +118,45 @@ Expected modeled evidence:
 
 Narrative point: the agent diagnoses with bounded evidence and explicitly avoids mutating financial state.
 
-## Act 6 — compliance evidence handoff (2 minutes)
+## Act 6 — async release, human gate, and agent handoff (4 minutes)
+
+- Channel: `#release-control`
+- Employees: Aisha Khan, Jon Bell, Priya Shah
+- Primary agent: `@ReleaseHelper`
+- Collaborating agent: `@NetworkOps`
+- Required tools: `watch_release_pipeline`, `finish_release_pipeline`, `verify_stage_deployment`
+
+First paste this start request:
+
+```text
+@ReleaseHelper start and watch modeled release REL-DEMO-2026-09-02-01. Do not finish it. Return the candidate URL and ask for approval.
+```
+
+Expected first result:
+
+- the pipeline watcher is dispatched through Omnigent's real async tool path;
+- ACP emits transient tool-start/tool-complete activity during the turn;
+- all four modeled checks pass;
+- the candidate URL opens on `http://127.0.0.1:8015`;
+- status is `AWAITING_HUMAN_APPROVAL` and release finish is `NOT_EXECUTED`.
+
+Then send a separate signed employee message in the same thread:
+
+```text
+@ReleaseHelper Approved: run release finish for REL-DEMO-2026-09-02-01 using this signed message as approval evidence, then delegate verification of the returned stage URL to the network operations agent.
+```
+
+Expected second result and callback chain:
+
+1. ReleaseHelper passes the later Buzz event ID into `finish_release_pipeline` as approval evidence.
+2. The local release surface changes to `DEPLOYED_TO_STAGE` and returns `http://127.0.0.1:8015/releases/REL-DEMO-2026-09-02-01`.
+3. ReleaseHelper publishes a structured signed `@NetworkOps` mention in the same Buzz thread.
+4. NetworkOps receives an independent ACP turn, runs `verify_stage_deployment`, and mentions `@ReleaseHelper` in its signed result.
+5. ReleaseHelper summarizes the healthy stage verification without launching another delegation. Production remains untouched.
+
+Narrative point: ACP progress is live but transient; durable milestones, human authority, delegation, and outcomes remain signed Buzz events. The pipeline values are modeled, while both agents, both runtimes, and the collaboration protocol are real local components.
+
+## Act 7 — compliance evidence handoff (2 minutes)
 
 - Channel: `#compliance-evidence`
 - Employees: Elena Rossi, Priya Shah, Maya Patel
@@ -155,8 +193,8 @@ End with the thesis: the team owns a persistent AI colleague in Buzz; Omnigent m
 If time is limited:
 
 1. Show the locked channel list and status page.
-2. Run only the tokenization scenario.
-3. Point out the real threaded reply, synthetic data label, named owners, blocked gate, and no-go recommendation.
+2. Run the two-message release-control scenario.
+3. Point out the real async tool activity, signed approval boundary, live stage URL, and second-agent callback.
 4. Show the provider switch in `.env.example`.
 5. Close on the collaboration-plane/execution-plane separation.
 

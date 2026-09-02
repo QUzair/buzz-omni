@@ -2,6 +2,10 @@ import type { BridgeConfig } from './config.js'
 
 type JsonObject = Record<string, unknown>
 type DeltaHandler = (text: string) => void
+export type OmnigentActivity =
+  | { type: 'tool_started'; callId: string; name: string }
+  | { type: 'tool_completed'; callId: string }
+type ActivityHandler = (activity: OmnigentActivity) => void
 
 export class OmnigentClient {
   constructor(private readonly config: BridgeConfig, private readonly request: typeof fetch = fetch) {}
@@ -57,7 +61,13 @@ export class OmnigentClient {
     }), 'Submit Omnigent message')
   }
 
-  async runTurn(sessionId: string, text: string, onDelta: DeltaHandler, parentSignal?: AbortSignal): Promise<string> {
+  async runTurn(
+    sessionId: string,
+    text: string,
+    onDelta: DeltaHandler,
+    parentSignal?: AbortSignal,
+    onActivity: ActivityHandler = () => {},
+  ): Promise<string> {
     const timeout = AbortSignal.timeout(this.config.turnTimeoutMs)
     const signal = parentSignal ? AbortSignal.any([parentSignal, timeout]) : timeout
     const response = await this.expectOk(await this.request(
@@ -77,6 +87,9 @@ export class OmnigentClient {
         onDelta(event.delta)
       } else if (type === 'response.in_progress' || type === 'turn.started') {
         started = true
+      } else if (type === 'response.output_item.done') {
+        const activity = parseToolActivity(event)
+        if (activity) onActivity(activity)
       } else if (type === 'response.completed' || type === 'turn.completed') {
         break
       } else if (type === 'response.failed' || type === 'turn.failed' || type === 'response.cancelled' || type === 'turn.cancelled') {
@@ -89,6 +102,26 @@ export class OmnigentClient {
     }
     return answer.trim()
   }
+}
+
+function parseToolActivity(event: JsonObject): OmnigentActivity | undefined {
+  const item = event.item
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return undefined
+  const record = item as JsonObject
+  const callId = boundedString(record.call_id, 200)
+  if (!callId) return undefined
+  if (record.type === 'function_call') {
+    const name = boundedString(record.name, 160)
+    return name ? { type: 'tool_started', callId, name } : undefined
+  }
+  if (record.type === 'function_call_output') return { type: 'tool_completed', callId }
+  return undefined
+}
+
+function boundedString(value: unknown, limit: number): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim()
+  return normalized && normalized.length <= limit ? normalized : undefined
 }
 
 export async function* parseSse(stream: ReadableStream<Uint8Array>): AsyncGenerator<JsonObject> {

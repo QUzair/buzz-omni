@@ -26,7 +26,8 @@ Buzz relay :8010 ── Postgres + Redis + MinIO
         ├── #fraud-intelligence ───── @FraudReview listener
         ├── #tokenization-launch ──── @TokenLaunch listener
         ├── #settlement-operations ── @SettlementOps listener
-        └── #compliance-evidence ──── @ComplianceReview listener
+        ├── #compliance-evidence ──── @ComplianceReview listener
+        └── #release-control ──────── @ReleaseHelper + @NetworkOps
                                          │ ACP over stdio
                                          ▼
                               buzz-omnigent-acp bridge
@@ -43,7 +44,7 @@ Buzz relay :8010 ── Postgres + Redis + MinIO
                           mastercard_tools (synthetic data)
 ```
 
-The read-only status surface on port `8014` reports relay health, Omnigent health, provider selection, listener count, and channel-to-agent bindings.
+The read-only status surface on port `8014` reports relay health, Omnigent health, provider selection, listener count, and channel-to-agent bindings. Port `8015` is a loopback-only, stateful surface for the modeled release candidate and stage deployment; it starts gated and advances only when the finish tool receives a later signed Buzz approval event ID.
 
 ## Turn sequence
 
@@ -72,6 +73,37 @@ sequenceDiagram
     R-->>E: Threaded agent answer
 ```
 
+## Async release and agent-to-agent sequence
+
+```mermaid
+sequenceDiagram
+    participant E as Employee in Buzz
+    participant RH as ReleaseHelper listener
+    participant O1 as ReleaseHelper Omnigent session
+    participant P as Modeled pipeline + :8015
+    participant NO as NetworkOps listener
+    participant O2 as NetworkOps Omnigent session
+
+    E->>RH: Signed @ReleaseHelper start mention
+    RH->>O1: ACP session/prompt
+    O1->>P: sys_call_async(watch_release_pipeline)
+    O1-->>RH: ACP tool_call / tool_call_update
+    RH-->>E: Signed candidate + approval request
+    E->>RH: Later signed finish approval
+    RH->>O1: ACP prompt with Buzz event ID
+    O1->>P: finish_release_pipeline(event ID)
+    P-->>O1: DEPLOYED_TO_STAGE + local URL
+    RH->>NO: Signed @NetworkOps Buzz mention
+    NO->>O2: Independent ACP turn
+    O2->>P: verify_stage_deployment
+    NO->>RH: Signed @ReleaseHelper callback
+    RH-->>E: Signed verification summary
+```
+
+ACP `session/update` notifications describe transient activity within an active turn. The bridge maps redacted Omnigent function-call lifecycle events to ACP `tool_call` and `tool_call_update` messages; it never forwards tool arguments or outputs in those notifications. Candidate milestones, approval, deployment outcome, delegation, and callback are durable signed Buzz messages.
+
+Agent-to-agent calls deliberately use Buzz rather than an in-process bridge shortcut. Both bots are members of `#release-control`, both listener allowlists name the peer key, and each structured mention creates a separate agent/session turn with its own tool evidence. This preserves the same identity, membership, thread, and audit boundary used for human-to-agent work.
+
 ## Identity and session mapping
 
 - Each agent has a locally generated Nostr keypair stored under ignored `.local/buzz/identities.json`.
@@ -99,7 +131,7 @@ This preserves shared steering while preventing two uncontrolled turns from muta
 
 The Omnigent host runs on the local Mac. Agent profiles use `darwin_seatbelt`, expose no writable paths, and block network access for sandboxed OS tools. The selected model harness communicates with its model provider outside that OS-tool sandbox; this is an intentional provider boundary, not a claim that inference is local.
 
-The Python tools contain deterministic scenario data only. They reject unknown identifiers, label every return value, and expose write-like behavior as `NOT_EXECUTED` previews requiring human approval.
+The Python tools contain deterministic scenario data only. They reject unknown identifiers, label every return value, and expose write-like behavior as `NOT_EXECUTED` previews requiring human approval. Release finish is the one state transition in the POC: it changes only the synthetic loopback staging surface after recording a separate signed Buzz approval event ID; it never contacts CI/CD or production.
 
 ## Persistence
 

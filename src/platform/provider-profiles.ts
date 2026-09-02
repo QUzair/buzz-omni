@@ -15,6 +15,8 @@ export type AgentDefinition = {
   description: string
   mission: string
   tools: ToolName[]
+  asyncEnabled?: boolean
+  instructions?: string[]
 }
 
 const providers: Record<ProviderName, ProviderProfile> = {
@@ -81,6 +83,30 @@ const toolDefinitions = {
     ],
     required: '[action, target]',
   },
+  watch_release_pipeline: {
+    description: 'Watch a modeled release pipeline and return its approval-gated candidate state.',
+    callable: 'mastercard_tools.tools.watch_release_pipeline',
+    properties: ['        release_id: { type: string }'],
+    required: '[release_id]',
+  },
+  finish_release_pipeline: {
+    description: 'Finish a modeled release only after a later signed Buzz approval event.',
+    callable: 'mastercard_tools.tools.finish_release_pipeline',
+    properties: [
+      '        release_id: { type: string }',
+      '        approval_event_id: { type: string }',
+    ],
+    required: '[release_id, approval_event_id]',
+  },
+  verify_stage_deployment: {
+    description: 'Verify the modeled stage deployment URL for a known release.',
+    callable: 'mastercard_tools.tools.verify_stage_deployment',
+    properties: [
+      '        release_id: { type: string }',
+      '        stage_url: { type: string }',
+    ],
+    required: '[release_id, stage_url]',
+  },
 } as const
 
 export const agentDefinitions: readonly AgentDefinition[] = [
@@ -89,7 +115,11 @@ export const agentDefinitions: readonly AgentDefinition[] = [
     name: 'mastercard_network_operations',
     description: 'Authorization-health and regional incident triage specialist.',
     mission: 'Compare authorization health, isolate a likely fault domain, and draft an evidence-based incident update.',
-    tools: ['compare_authorization_health', 'preview_operational_action'],
+    tools: ['compare_authorization_health', 'verify_stage_deployment', 'preview_operational_action'],
+    instructions: [
+      'When another agent asks for a staging smoke check, call verify_stage_deployment with the exact modeled URL.',
+      'After a delegated staging check, include the exact text @ReleaseHelper in the result so the delegating agent receives a signed Buzz callback.',
+    ],
   },
   {
     slug: 'fraud-review',
@@ -118,6 +148,21 @@ export const agentDefinitions: readonly AgentDefinition[] = [
     description: 'Control-evidence and policy review specialist.',
     mission: 'Locate modeled control evidence, identify gaps, and draft a review-ready summary without representing legal advice.',
     tools: ['lookup_control_evidence', 'preview_operational_action'],
+  },
+  {
+    slug: 'release-helper',
+    name: 'mastercard_release_helper',
+    description: 'Approval-gated release pipeline coordinator and staging handoff specialist.',
+    mission: 'Watch modeled pipeline evidence, preserve the human finish gate, and coordinate an independent staging verification.',
+    tools: ['watch_release_pipeline', 'finish_release_pipeline'],
+    asyncEnabled: true,
+    instructions: [
+      'For an initial start request, dispatch watch_release_pipeline through sys_call_async, then use sys_read_inbox until that task completes before reporting its result.',
+      'The initial request may report the candidate URL but MUST NOT call finish_release_pipeline.',
+      'Call finish_release_pipeline only after a later signed employee message explicitly approves finishing the release; pass that triggering Buzz Event ID as approval_event_id.',
+      'After finish returns DEPLOYED_TO_STAGE, include the exact text @NetworkOps and ask it to verify the returned stage URL in the same thread.',
+      'When @NetworkOps calls back, summarize its tool-backed verification without starting another delegation.',
+    ],
   },
 ] as const
 
@@ -166,6 +211,7 @@ export function renderAgentSpec(agent: AgentDefinition, provider: ProviderProfil
     '  If the required evidence tool fails, say that evidence is unavailable and stop; do not invent blockers, owners, metrics, or status.',
     '  Every tool result is SYNTHETIC_MODELED_DATA. Say so plainly in the answer.',
     '  Never claim that a preview was executed. Write-like actions require explicit human approval outside this POC.',
+    ...(agent.instructions ?? []).map((instruction) => `  ${instruction}`),
     '  Return only the response that should be published to the Buzz thread.',
     'executor:',
     `  harness: ${provider.harness}`,
@@ -182,7 +228,7 @@ export function renderAgentSpec(agent: AgentDefinition, provider: ProviderProfil
     'tools:',
     renderedTools,
     'cancellable: true',
-    'async: false',
+    `async: ${agent.asyncEnabled === true ? 'true' : 'false'}`,
     '',
   ].join('\n')
 }

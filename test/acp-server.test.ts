@@ -5,6 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { AcpServer } from '../src/acp-server.js'
 import type { PublishInput } from '../src/buzz-publisher.js'
 import type { BridgeConfig } from '../src/config.js'
+import type { OmnigentActivity } from '../src/omnigent-client.js'
 
 const config: BridgeConfig = { omnigentBaseUrl: 'https://omni.example', omnigentAgentId: 'ag_market', omnigentHostId: '550e8400-e29b-41d4-a716-446655440000', omnigentWorkspace: '/srv/omni-agent', buzzCli: 'buzz', buzzRelayUrl: 'https://buzz.example', maxPromptBytes: 100_000, turnTimeoutMs: 5_000 }
 
@@ -17,7 +18,18 @@ test('maps ACP session lifecycle to Omnigent and publishes the answer to Buzz', 
   const published: PublishInput[] = []
   const omnigent = {
     createSession: async () => 'ses_remote',
-    runTurn: async (_id: string, _prompt: string, onDelta: (text: string) => void) => { onDelta('sandbox answer'); return 'sandbox answer' },
+    runTurn: async (
+      _id: string,
+      _prompt: string,
+      onDelta: (text: string) => void,
+      _signal?: AbortSignal,
+      onActivity?: (activity: OmnigentActivity) => void,
+    ) => {
+      onActivity?.({ type: 'tool_started', callId: 'call_watch', name: 'watch_release_pipeline' })
+      onActivity?.({ type: 'tool_completed', callId: 'call_watch' })
+      onDelta('sandbox answer')
+      return 'sandbox answer'
+    },
   }
   new AcpServer(config, omnigent, async (message) => { published.push(message) }, input, output).run()
 
@@ -32,6 +44,16 @@ test('maps ACP session lifecycle to Omnigent and publishes the answer to Buzz', 
   assert.equal((messages.find((message) => message.id === 1)?.result as Record<string, unknown>).protocolVersion, 2)
   assert.deepEqual(messages.find((message) => message.id === 2)?.result, { sessionId: 'ses_remote' })
   assert.deepEqual(messages.find((message) => message.id === 3)?.result, { stopReason: 'end_turn' })
+  assert.deepEqual(
+    messages
+      .filter((message) => message.method === 'session/update')
+      .map((message) => ((message.params as Record<string, unknown>).update as Record<string, unknown>))
+      .filter((update) => update.sessionUpdate === 'tool_call' || update.sessionUpdate === 'tool_call_update'),
+    [
+      { sessionUpdate: 'tool_call', toolCallId: 'call_watch', title: 'watch_release_pipeline', kind: 'other', status: 'in_progress' },
+      { sessionUpdate: 'tool_call_update', toolCallId: 'call_watch', status: 'completed' },
+    ],
+  )
   assert.deepEqual(published, [{ channelId: '550e8400-e29b-41d4-a716-446655440000', replyTo: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', content: 'sandbox answer' }])
   input.end()
 })

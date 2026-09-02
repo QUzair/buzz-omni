@@ -35,6 +35,7 @@ const agentProfiles = {
   tokenization_readiness: { name: 'TokenLaunch', about: 'Owner-attested Omnigent agent · Tokenization launch readiness' },
   settlement_support: { name: 'SettlementOps', about: 'Owner-attested Omnigent agent · Settlement variance support' },
   compliance_review: { name: 'ComplianceReview', about: 'Owner-attested Omnigent agent · Control evidence review' },
+  release_helper: { name: 'ReleaseHelper', about: 'Owner-attested Omnigent agent · Approval-gated release coordination' },
 } as const
 
 type HumanIdentity = keyof typeof humanProfiles
@@ -46,6 +47,7 @@ export type ChannelSeed = {
   name: string
   description: string
   agent: AgentIdentity
+  collaboratorAgents?: AgentIdentity[]
   members: HumanIdentity[]
   messages: SeedMessage[]
 }
@@ -106,6 +108,18 @@ export const channelCatalog: readonly ChannelSeed[] = [
       { author: 'maya_patel', content: 'A concise evidence inventory and owner list will be enough for the review handoff.' },
     ],
   },
+  {
+    name: 'release-control',
+    description: 'Release pipeline monitoring, explicit finish approval, and staging verification · synthetic modeled data',
+    agent: 'release_helper',
+    collaboratorAgents: ['network_operations'],
+    members: ['owner', 'jon_bell', 'priya_shah'],
+    messages: [
+      { author: 'priya_shah', content: 'Release REL-DEMO-2026-09-02-01 is the modeled candidate for today’s staging window. Production is out of scope.' },
+      { author: 'jon_bell', content: 'The release helper may watch build and test evidence, but release finish needs a separate human approval message.' },
+      { author: 'owner', content: 'After stage deployment, delegate an independent smoke check to NetworkOps and keep every result in this thread.' },
+    ],
+  },
 ] as const
 
 export function extractChannelId(value: unknown): string | undefined {
@@ -153,6 +167,31 @@ export function buildAgentAccessAllowlist(
   ])]
 }
 
+export function buildAgentAccessAllowlistForAgent(
+  agent: AgentIdentity,
+  channels: readonly ChannelSeed[],
+  identities: Record<string, Keypair>,
+  desktopPublicKey?: string,
+): string[] {
+  const callers: string[] = []
+  for (const channel of channels) {
+    const channelAgents = [channel.agent, ...(channel.collaboratorAgents ?? [])]
+    if (!channelAgents.includes(agent)) continue
+    for (const member of channel.members) callers.push(requireIdentity(identities, member).publicKey)
+    for (const peer of channelAgents) {
+      if (peer !== agent) callers.push(requireIdentity(identities, peer).publicKey)
+    }
+  }
+  if (desktopPublicKey) callers.push(desktopPublicKey)
+  return [...new Set(callers)]
+}
+
+export function humanMembershipAdditions(channel: ChannelSeed): HumanIdentity[] {
+  // A channel creator is already its owner. Upstream nostr drops a self p-tag
+  // unless explicitly enabled, so publishing a redundant self add is invalid.
+  return channel.members.filter((member) => member !== 'owner')
+}
+
 export async function seedBuzz(
   desktopPublicKeyInput: string | undefined = process.env.BUZZ_DESKTOP_PUBKEY,
 ): Promise<{ channels: Record<string, string>; seededMessages: string[]; desktopMemberEnrolled: boolean }> {
@@ -176,24 +215,26 @@ export async function seedBuzz(
     await setProfile(pair, profile, authTag)
   }
 
-  for (const channel of channelCatalog) {
-    const pair = identities[channel.agent]!
-    const authTag = state.authTags[channel.agent]
-    if (!authTag) throw new Error(`Buzz owner attestation is missing: ${channel.agent}`)
+  for (const identityName of agentIdentityNames) {
+    const pair = identities[identityName]!
+    const authTag = state.authTags[identityName]
+    if (!authTag) throw new Error(`Buzz owner attestation is missing: ${identityName}`)
     await publishAgentDirectory(
       identities.owner!,
       pair,
       authTag,
-      agentProfiles[channel.agent].name,
-      buildAgentAccessAllowlist(channel, identities, desktopPublicKey),
+      agentProfiles[identityName].name,
+      buildAgentAccessAllowlistForAgent(identityName, channelCatalog, identities, desktopPublicKey),
     )
   }
 
   for (const channel of channelCatalog) {
     const channelId = state.channels[channel.name] ?? await findOrCreateChannel(identities.owner!, channel)
     state.channels[channel.name] = channelId
-    await addChannelMember(identities.owner!, channelId, identities[channel.agent]!.publicKey, 'bot')
-    for (const member of channel.members) {
+    for (const agent of [channel.agent, ...(channel.collaboratorAgents ?? [])]) {
+      await addChannelMember(identities.owner!, channelId, identities[agent]!.publicKey, 'bot')
+    }
+    for (const member of humanMembershipAdditions(channel)) {
       await addChannelMember(identities.owner!, channelId, identities[member]!.publicKey, 'member')
     }
     if (desktopPublicKey) {
@@ -333,6 +374,12 @@ function isUuid(value: string): boolean {
 
 function isHex(value: string, length: number): boolean {
   return new RegExp(`^[0-9a-f]{${length}}$`, 'i').test(value)
+}
+
+function requireIdentity(identities: Record<string, Keypair>, name: string): Keypair {
+  const identity = identities[name]
+  if (!identity) throw new Error(`Buzz identity is missing: ${name}`)
+  return identity
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

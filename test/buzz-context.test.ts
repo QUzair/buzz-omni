@@ -14,6 +14,20 @@ IMPORTANT: use --reply-to aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   })
 })
 
+test('keeps agent-to-agent replies anchored to the trusted Buzz thread root', () => {
+  const prompt = `<context>
+Scope: thread
+Channel: release-control (#550e8400-e29b-41d4-a716-446655440000)
+Thread root: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+</context>
+<buzz-event type="@mention">agent handoff</buzz-event>`
+
+  assert.deepEqual(parseBuzzRoute(prompt), {
+    channelId: '550e8400-e29b-41d4-a716-446655440000',
+    replyTo: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+  })
+})
+
 test('rejects a prompt without a structurally valid Buzz channel', () => {
   assert.throws(() => parseBuzzRoute('<context>Channel: not-a-channel</context>'), /channel UUID/)
 })

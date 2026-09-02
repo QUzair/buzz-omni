@@ -33,6 +33,28 @@ test('every provider retains the same sandbox and modeled tool contract', () => 
   }
 })
 
+test('ReleaseHelper enables Omnigent async dispatch and keeps finish human-gated', () => {
+  const release = agentDefinitions.find((agent) => agent.slug === 'release-helper')
+  assert.ok(release)
+  const yaml = renderAgentSpec(release, resolveProvider('copilot'))
+
+  assert.match(yaml, /callable: mastercard_tools\.tools\.watch_release_pipeline/)
+  assert.match(yaml, /callable: mastercard_tools\.tools\.finish_release_pipeline/)
+  assert.match(yaml, /async: true/)
+  assert.match(yaml, /sys_read_inbox/)
+  assert.match(yaml, /later signed employee message/)
+  assert.match(yaml, /@NetworkOps/)
+
+  const nonRelease = renderAgentSpec(agentDefinitions[0]!, resolveProvider('copilot'))
+  assert.match(nonRelease, /async: false/)
+})
+
+test('NetworkOps can perform the delegated staging verification and call back', () => {
+  const yaml = renderAgentSpec(agentDefinitions[0]!, resolveProvider('copilot'))
+  assert.match(yaml, /callable: mastercard_tools\.tools\.verify_stage_deployment/)
+  assert.match(yaml, /@ReleaseHelper/)
+})
+
 test('unknown providers fail closed', () => {
   assert.throws(() => resolveProvider('other'), /gemini or copilot/)
 })
@@ -44,5 +66,6 @@ test('the demo catalog contains distinct triage specialists', () => {
     'tokenization-readiness',
     'settlement-support',
     'compliance-review',
+    'release-helper',
   ])
 })

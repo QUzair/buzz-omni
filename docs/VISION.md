@@ -74,18 +74,21 @@ The local POC demonstrates the complete collaboration-to-execution loop on one M
 5. the selected Copilot or Gemini harness calls a scenario-specific modeled tool;
 6. the agent publishes a signed threaded reply back to Buzz.
 
+The release-control slice additionally proves that a long-running tool can use Omnigent's async dispatch, that a later signed human event can satisfy a finish gate, and that one persistent agent can delegate to another through Buzz without collapsing their identities or execution sessions.
+
 The demo uses the real Buzz Desktop app, relay, signatures, membership model, ACP listener, Omnigent server, Omnigent host, model harness, sandbox, and session API. Only the Mastercard people, incidents, metrics, accounts, and tool data are modeled.
 
 ## Near-term roadmap
 
 ### POC — local proof, implemented here
 
-- one self-hosted Buzz community with five membership-scoped channels;
-- five persistent agent identities and five concurrent ACP listeners;
+- one self-hosted Buzz community with six membership-scoped channels;
+- six persistent agent identities and six concurrent ACP listeners;
 - shared sessions steered by several signed employee identities;
 - a local Omnigent server/host with macOS Seatbelt isolation;
 - switchable Copilot and Gemini harness profiles;
-- synthetic, approval-safe operational tools.
+- synthetic, approval-safe operational tools;
+- real ACP async activity, signed approval evidence, and a ReleaseHelper-to-NetworkOps handoff.
 
 ### Pilot — governed internal evaluation
 
@@ -112,6 +115,8 @@ The POC is successful when a reviewer can see, without relying on a mock fronten
 - an explicit mention creates a real Omnigent turn;
 - the expected named tool is visible in the resulting session evidence;
 - the answer is posted to the correct Buzz thread and labeled synthetic;
+- a later signed message—not the initial request—unlocks the modeled release finish;
+- a signed agent mention creates an independent second-agent verification turn;
 - the runtime can switch providers without changing the Buzz agent identity;
 - every consequential recommendation ends at a human decision boundary.
 

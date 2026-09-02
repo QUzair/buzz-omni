@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import json
+import re
+import time
 from typing import Any
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 
 _METADATA = {
@@ -10,6 +15,10 @@ _METADATA = {
     "dataset_version": "2026.09",
     "observed_at": "2026-09-02T09:20:00Z",
 }
+
+_RELEASE_ID = "REL-DEMO-2026-09-02-01"
+_CANDIDATE_URL = f"http://127.0.0.1:8015/candidates/{_RELEASE_ID}"
+_STAGE_URL = f"http://127.0.0.1:8015/releases/{_RELEASE_ID}"
 
 
 def _result(scenario_id: str, **payload: Any) -> dict[str, Any]:
@@ -130,3 +139,87 @@ def preview_operational_action(action: str, target: str) -> dict[str, Any]:
         approval_required=True,
         next_step="human owner must review and execute in a real authorized system",
     )
+
+
+def watch_release_pipeline(release_id: str) -> dict[str, Any]:
+    """Return a modeled pipeline watch result that stops before release finish."""
+    _require_release(release_id)
+    # The bounded delay makes Omnigent's real async-dispatch lifecycle visible
+    # without contacting a CI/CD service or slowing the demo materially.
+    time.sleep(0.35)
+    _notify_release_surface("watch")
+    return _result(
+        "release-pipeline-001",
+        release_id=release_id,
+        pipeline_status="AWAITING_HUMAN_APPROVAL",
+        candidate_url=_CANDIDATE_URL,
+        steps=[
+            {"name": "build", "status": "passed", "duration_seconds": 18},
+            {"name": "unit-and-contract-tests", "status": "passed", "duration_seconds": 31},
+            {"name": "package-candidate", "status": "passed", "duration_seconds": 12},
+            {"name": "stage-readiness", "status": "passed", "duration_seconds": 7},
+        ],
+        finish_action="NOT_EXECUTED",
+        approval_required=True,
+        next_step="ask an authorized employee whether to run release finish",
+    )
+
+
+def finish_release_pipeline(release_id: str, approval_event_id: str) -> dict[str, Any]:
+    """Finish a modeled release using the later signed Buzz event as evidence."""
+    _require_release(release_id)
+    if re.fullmatch(r"[0-9a-fA-F]{64}", approval_event_id) is None:
+        raise ValueError("approval_event_id must be a 64-character signed Buzz event id")
+    _notify_release_surface("finish", {"approvalEventId": approval_event_id.lower()})
+    return _result(
+        "release-finish-001",
+        release_id=release_id,
+        approval_event_id=approval_event_id.lower(),
+        deployment_status="DEPLOYED_TO_STAGE",
+        environment="stage",
+        stage_url=_STAGE_URL,
+        rollback_status="ready",
+        production_deployed=False,
+    )
+
+
+def verify_stage_deployment(release_id: str, stage_url: str) -> dict[str, Any]:
+    """Verify only the local modeled stage surface for the known release."""
+    _require_release(release_id)
+    if stage_url != _STAGE_URL:
+        raise ValueError(f"stage_url must be the modeled stage URL {_STAGE_URL}")
+    return _result(
+        "release-stage-verification-001",
+        release_id=release_id,
+        stage_url=stage_url,
+        environment="stage",
+        health="healthy",
+        checks=[
+            {"name": "http-health", "status": "passed", "latency_ms": 42},
+            {"name": "configuration", "status": "passed"},
+            {"name": "rollback-marker", "status": "passed"},
+        ],
+        production_traffic=False,
+    )
+
+
+def _require_release(release_id: str) -> None:
+    if release_id != _RELEASE_ID:
+        raise ValueError(f"release_id must reference the modeled release {_RELEASE_ID}")
+
+
+def _notify_release_surface(action: str, payload: dict[str, str] | None = None) -> None:
+    """Advance the loopback-only visual release state when the POC is running."""
+    request = Request(
+        f"http://127.0.0.1:8015/api/releases/{_RELEASE_ID}/{action}",
+        data=json.dumps(payload or {}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=1.0) as response:
+            response.read(1)
+    except (URLError, TimeoutError):
+        # The deterministic tool contract remains usable in unit tests and when
+        # the optional visual surface is not running.
+        return

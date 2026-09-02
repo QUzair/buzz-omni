@@ -70,6 +70,40 @@ test('streams a turn after opening the SSE connection', async () => {
   assert.match(calls[1] ?? '', /events/)
 })
 
+test('maps Omnigent function-call items to redacted ACP tool activity', async () => {
+  const fakeFetch: typeof fetch = async (input) => {
+    if (String(input).endsWith('/stream?idle=false')) return sseResponse([
+      {
+        type: 'response.output_item.done',
+        item: { type: 'function_call', call_id: 'call_watch', name: 'watch_release_pipeline', arguments: '{"release_id":"REL-DEMO-2026-09-02-01"}' },
+      },
+      {
+        type: 'response.output_item.done',
+        item: { type: 'function_call_output', call_id: 'call_watch', output: 'sensitive modeled result' },
+      },
+      { type: 'response.output_text.delta', delta: 'Pipeline watched' },
+      { type: 'response.completed' },
+    ])
+    return new Response(null, { status: 202 })
+  }
+  const activities: unknown[] = []
+
+  const answer = await new OmnigentClient(config, fakeFetch).runTurn(
+    'ses_123',
+    'watch it',
+    () => {},
+    undefined,
+    (activity) => activities.push(activity),
+  )
+
+  assert.equal(answer, 'Pipeline watched')
+  assert.deepEqual(activities, [
+    { type: 'tool_started', callId: 'call_watch', name: 'watch_release_pipeline' },
+    { type: 'tool_completed', callId: 'call_watch' },
+  ])
+  assert.doesNotMatch(JSON.stringify(activities), /sensitive modeled result/)
+})
+
 test('fails immediately when the runner reports failure before output starts', async () => {
   const fakeFetch: typeof fetch = async (input) => {
     if (String(input).endsWith('/stream?idle=false')) return sseResponse([

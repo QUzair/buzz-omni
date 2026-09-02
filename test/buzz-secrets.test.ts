@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, stat } from 'node:fs/promises'
+import { mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
@@ -49,4 +49,36 @@ test('creates private local identity and environment files once', async () => {
   const state = JSON.parse(await readFile(join(root, 'identities.json'), 'utf8')) as { identities: Record<string, unknown> }
   assert.ok(state.identities.owner)
   assert.ok(state.identities.network_operations)
+})
+
+test('adds a release helper identity without rotating existing local keys', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'buzz-secrets-migration-test-'))
+  let sequence = 1
+  const generate = async () => {
+    const digit = sequence.toString(16)
+    sequence += 1
+    return { publicKey: digit.repeat(64), secretKey: digit.repeat(64) }
+  }
+
+  await createBuzzSecrets(root, generate, () => 'd'.repeat(64))
+  const statePath = join(root, 'identities.json')
+  const legacy = JSON.parse(await readFile(statePath, 'utf8')) as {
+    identities: Record<string, { publicKey: string; secretKey: string }>
+  }
+  delete legacy.identities.release_helper
+  const existingKeys = structuredClone(legacy.identities)
+  await writeFile(statePath, `${JSON.stringify(legacy, null, 2)}\n`, { mode: 0o600 })
+
+  const migrated = await createBuzzSecrets(root, generate, () => 'e'.repeat(64))
+  const current = JSON.parse(await readFile(statePath, 'utf8')) as {
+    identities: Record<string, { publicKey: string; secretKey: string }>
+  }
+
+  assert.equal(migrated.created, false)
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(current.identities).filter(([name]) => name !== 'release_helper')),
+    existingKeys,
+  )
+  assert.match(current.identities.release_helper?.publicKey ?? '', /^[0-9a-f]{64}$/)
+  assert.equal((await stat(statePath)).mode & 0o777, 0o600)
 })

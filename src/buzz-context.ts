@@ -14,7 +14,9 @@ export function parseBuzzRoute(prompt: string): BuzzRoute {
   if (!channelId) throw new Error('Buzz prompt did not include a valid channel UUID')
 
   const explicitReply = context.match(new RegExp(`--reply-to\\s+(${EVENT_ID})`, 'i'))?.[1]
-  return { channelId: channelId.toLowerCase(), replyTo: explicitReply?.toLowerCase() }
+  const threadRoot = context.match(new RegExp(`^Thread root:\\s+(${EVENT_ID})\\s*$`, 'im'))?.[1]
+  const replyTo = explicitReply ?? threadRoot
+  return { channelId: channelId.toLowerCase(), replyTo: replyTo?.toLowerCase() }
 }
 
 export function promptText(blocks: unknown, maxBytes: number): string {

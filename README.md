@@ -4,7 +4,7 @@ A single-repository proof of concept for several employees steering persistent, 
 
 > **Buzz is the shared human–agent collaboration plane. Omnigent is the governed agent execution plane.**
 
-The repository starts a pinned self-hosted Buzz relay, seeds signed employee and agent identities into five private channels, starts a pinned local Omnigent server and host, renders five sandboxed agent definitions, and runs one upstream `buzz-acp` listener per agent. An `@agent` mention becomes a real Omnigent turn and returns as a signed Buzz thread reply.
+The repository starts a pinned self-hosted Buzz relay, seeds signed employee and agent identities into six private channels, starts a pinned local Omnigent server and host, renders six sandboxed agent definitions, and runs one upstream `buzz-acp` listener per agent. An `@agent` mention becomes a real Omnigent turn and returns as a signed Buzz thread reply.
 
 ![Native Buzz Desktop showing the TokenLaunch workflow](artifacts/buzz-tokenization-launch.png)
 
@@ -48,7 +48,7 @@ BUZZ_DESKTOP_PUBKEY=replace-with-your-public-key
 OPEN_BUZZ_DESKTOP=true
 ```
 
-Enrollment adds that public identity to the relay, all five private channels, every channel agent's signed remote-directory policy, and every live invocation allowlist. An agent's named manager remains its owner and attestor, but is not its exclusive caller: every enrolled, authorized channel member can discover and `@mention` the agent in native Buzz autocomplete.
+Enrollment adds that public identity to the relay, all six private channels, every channel agent's signed remote-directory policy, and every live invocation allowlist. An agent's named manager remains its owner and attestor, but is not its exclusive caller: every enrolled, authorized channel member can discover and `@mention` the agent in native Buzz autocomplete.
 
 Validate the completed configuration:
 
@@ -62,7 +62,7 @@ npm run doctor
 npm run demo
 ```
 
-The command builds the bridge, starts the Buzz Docker stack, seeds the community, starts Omnigent and its local host, launches five ACP listeners, starts the status page, and opens Buzz Desktop. Stop everything cleanly with `Ctrl-C` in this terminal.
+The command builds the bridge, starts the Buzz Docker stack, seeds the community, starts Omnigent and its local host, launches six ACP listeners, starts the status and modeled release surfaces, and opens Buzz Desktop. Stop everything cleanly with `Ctrl-C` in this terminal.
 
 ### 4. Join the local Buzz community once
 
@@ -74,7 +74,7 @@ In Buzz Desktop:
 4. enter `http://127.0.0.1:8010`;
 5. complete the local profile prompt and open one of the seeded channels.
 
-Buzz labels a loopback community **Local Dev** in the native client. The five Mastercard channels and their signed participants are inside that real local community. Membership persists across platform restarts.
+Buzz labels a loopback community **Local Dev** in the native client. The six Mastercard channels and their signed participants are inside that real local community. Membership persists across platform restarts.
 
 ### 5. Trigger a real agent turn
 
@@ -84,7 +84,7 @@ Open `#tokenization-launch` and send:
 @TokenLaunch use check_tokenization_readiness for TR-DEMO-781. Report the returned gates, owners, blocker, and recommendation only. Do not grant approval.
 ```
 
-The expected result is a threaded, signed response containing the synthetic gate table and `NO_GO_PENDING_OWNER_APPROVAL`. See [the complete narrated demo sequence](docs/DEMO_SCENARIOS.md) for all five scenarios.
+The expected result is a threaded, signed response containing the synthetic gate table and `NO_GO_PENDING_OWNER_APPROVAL`. See [the complete narrated demo sequence](docs/DEMO_SCENARIOS.md) for all six scenarios, including approval-gated release coordination.
 
 ## What starts locally
 
@@ -92,7 +92,7 @@ The expected result is a threaded, signed response containing the synthetic gate
 Buzz Desktop
   └─ Buzz relay :8010
        ├─ Postgres, Redis, MinIO
-       └─ five upstream buzz-acp listeners
+       └─ six upstream buzz-acp listeners
             └─ repository ACP bridge
                  └─ Omnigent server :8013
                       └─ local Omnigent host
@@ -115,6 +115,7 @@ Read the [architecture](docs/ARCHITECTURE.md), [product vision](docs/VISION.md),
 | `#tokenization-launch` | `@TokenLaunch` | launch target, endpoint status, owner/blocker requirement | `check_tokenization_readiness` |
 | `#settlement-operations` | `@SettlementOps` | batch variance, transport evidence, read-only investigation | `investigate_settlement_variance` |
 | `#compliance-evidence` | `@ComplianceReview` | review need, legal boundary, evidence inventory | `lookup_control_evidence` |
+| `#release-control` | `@ReleaseHelper` + `@NetworkOps` | async pipeline watch, separate signed finish approval, independent staging check | `watch_release_pipeline`, `finish_release_pipeline`, `verify_stage_deployment` |
 
 The seeded employees—Aisha Khan, Maya Patel, Elena Rossi, Jon Bell, and Priya Shah—are fictitious identities with real local signatures. Agent write-like behavior produces `NOT_EXECUTED` previews and never modifies an operational system.
 
@@ -151,8 +152,8 @@ The platform never writes the Gemini key into generated agent YAML, logs, or sou
 | `npm run demo` | Build and run the complete integrated platform. |
 | `npm run platform:up` | Lower-level alias used by `demo`. |
 | `npm run platform:bootstrap` | Rebuild/reinstall pinned upstream artifacts without touching `.env`. |
-| `npm run agents:copilot` | Render the five Copilot Omnigent YAML files under `.local/agents/`. |
-| `npm run agents:gemini` | Render the five Gemini Omnigent YAML files under `.local/agents/`. |
+| `npm run agents:copilot` | Render the six Copilot Omnigent YAML files under `.local/agents/`. |
+| `npm run agents:gemini` | Render the six Gemini Omnigent YAML files under `.local/agents/`. |
 | `npm test` | Clean build and run the Node test suite. |
 | `python3 -m unittest mastercard_tools.test_tools` | Verify deterministic modeled tools and approval boundaries. |
 
@@ -165,6 +166,7 @@ The platform never writes the Gemini key into generated agent YAML, logs, or sou
 | `8012` | Buzz Prometheus metrics | `curl -fsS http://127.0.0.1:8012/metrics` |
 | `8013` | Omnigent API and optional inspection UI | `curl -fsS http://127.0.0.1:8013/health` |
 | `8014` | read-only platform status | `curl -fsS http://127.0.0.1:8014/health` |
+| `8015` | stateful modeled release candidate/stage surface | `curl -fsS http://127.0.0.1:8015/health` |
 
 All published services bind to `127.0.0.1`. The Omnigent UI is backend evidence, not the demo’s primary chat surface.
 
@@ -176,7 +178,8 @@ Real:
 - local Nostr keys, signatures, relay membership, private channel membership, and NIP-OA owner attestations;
 - agent-signed Buzz runtime-directory records and owner-signed invocation policies used by native autocomplete;
 - upstream Omnigent server, SQLite session state, local host/runner, provider harness, and Seatbelt sandbox;
-- five concurrent listeners, explicit host/session binding, tool invocation, and signed threaded responses.
+- six concurrent listeners, explicit host/session binding, tool invocation, ACP tool-progress updates, and signed threaded responses;
+- ReleaseHelper-to-NetworkOps delegation through signed Buzz mentions and independent Omnigent turns.
 
 Modeled:
 
@@ -196,8 +199,8 @@ Buzz private channels are membership-scoped. This POC does not claim end-to-end 
 │   ├── VISION.md                    product thesis and roadmap
 │   ├── ARCHITECTURE.md              components, flow, identity, security
 │   ├── ENVIRONMENT.md               variables, secrets, ports, operations
-│   ├── DEMO_SCENARIOS.md            narrated five-scenario sequence
-│   └── decisions/0001-...md          accepted architecture rationale
+│   ├── DEMO_SCENARIOS.md            narrated six-scenario sequence
+│   └── decisions/                    accepted architecture and protocol rationale
 ├── infra/buzz/compose.yml            loopback Buzz dependencies
 ├── src/platform/
 │   ├── platform-setup.ts             one-time setup orchestration
