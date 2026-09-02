@@ -3,20 +3,27 @@ const params = new URLSearchParams(location.search)
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 })[character])
+const agentEmoji = { 'triage-coordinator': '🐝', 'fraud-review': '🛡️', 'payments-ops': '⚡' }
 
-const agentTone = { 'triage-coordinator': 'amber', 'fraud-review': 'rose', 'payments-ops': 'cyan' }
+function showRequestedView() {
+  const agentsSelected = params.get('view') === 'agents'
+  $('#channel-view').hidden = agentsSelected
+  $('#agents-view').hidden = !agentsSelected
+  $('#agents-nav-link').classList.toggle('active', agentsSelected)
+  $('#channel-nav-link').classList.toggle('selected', !agentsSelected)
+  document.title = agentsSelected ? 'Buzz · Agents' : 'Buzz · Customer triage'
+}
 
 function renderSetup(setup) {
-  $('#runtime-state').textContent = 'Online'
-  $('#runtime-state').classList.add('online')
-  $('#agent-count').textContent = `${setup.agents.length} active`
-  $('#agent-nav').innerHTML = setup.agents.map((agent) => `
-    <div><span class="agent-presence ${agentTone[agent.id] || 'amber'}">${escapeHtml(agent.name.charAt(0))}</span><p><strong>${escapeHtml(agent.name)}</strong><small>${escapeHtml(agent.handle)}</small></p><i></i></div>
-  `).join('')
-  $('#agent-cards').innerHTML = setup.agents.map((agent, index) => `
-    <article class="agent-card ${index === 0 ? 'active' : ''}">
-      <span class="agent-presence ${agentTone[agent.id] || 'amber'}">${escapeHtml(agent.name.charAt(0))}</span>
-      <div><strong>${escapeHtml(agent.name)}</strong><p>${escapeHtml(agent.role)}</p><small>${agent.tools.length} mock tools</small></div>
+  $('#agent-count').textContent = `${setup.agents.length} agents`
+  $('#agent-cards').innerHTML = setup.agents.map((agent) => `
+    <article class="agent-card">
+      <div class="agent-card-head">
+        <span class="agent-card-avatar">${agentEmoji[agent.id] || '🤖'}</span>
+        <div><strong>${escapeHtml(agent.name)}</strong><small>${escapeHtml(agent.handle)}</small></div>
+      </div>
+      <p>${escapeHtml(agent.role)}</p>
+      <footer class="agent-card-footer"><i></i><span>Running · Omnigent</span><span>${agent.tools.length} mock tools</span></footer>
     </article>
   `).join('')
 }
@@ -25,30 +32,31 @@ function renderResult(result) {
   const response = $('#agent-response')
   response.classList.remove('loading')
   response.innerHTML = `
-    <div class="avatar bot">T</div>
-    <div class="message-body">
-      <header><strong>Triage Coordinator</strong><span class="bot-label">AGENT</span><time>10:24</time></header>
-      <div class="route-line"><span class="priority">${escapeHtml(result.priority)}</span><span>Routed to</span><strong>${escapeHtml(result.agent)}</strong><span class="route-arrow">→</span></div>
+    <div class="message-avatar triage-avatar">🐝</div>
+    <div class="message-copy">
+      <header><strong>Triage Coordinator</strong><time>10:24 AM</time></header>
+      <div class="route-summary"><span class="priority">${escapeHtml(result.priority)}</span><span>Routed to</span><strong>${escapeHtml(result.agent)}</strong></div>
       <p>${escapeHtml(result.answer)}</p>
-      <div class="decision-card">
-        <span>RECOMMENDED NEXT STEP</span>
-        <strong>${escapeHtml(result.nextStep)}</strong>
-        <button type="button">${escapeHtml(result.actionLabel)} <b>→</b></button>
-      </div>
-      <div class="message-meta"><span>✓ ${result.tools.length} mock tools completed</span><span>${result.durationMs} ms</span></div>
+      <p class="next-step"><strong>Next:</strong> ${escapeHtml(result.nextStep)} <button type="button">${escapeHtml(result.actionLabel)}</button></p>
+      <details class="run-details" open>
+        <summary>Agent activity <span>${result.tools.length} mock tool calls · ${result.durationMs} ms</span></summary>
+        <div class="tool-list">${result.tools.map((tool, index) => `
+          <div class="tool-row ${tool.status === 'approval_required' ? 'approval' : ''}">
+            <span class="tool-index">${index + 1}</span>
+            <div><strong>${escapeHtml(tool.label)}</strong><code>${escapeHtml(tool.name)}</code><p>${escapeHtml(tool.output)}</p></div>
+            <span>${tool.status === 'approval_required' ? 'Approval' : 'Done'}</span>
+          </div>`).join('')}
+        </div>
+      </details>
+      <div class="buzz-reactions"><button>👍 <span>1</span></button><button>💬 <span>Reply</span></button></div>
     </div>`
-
-  $('#trace-duration').textContent = `${result.durationMs} ms`
-  $('#tool-trace').innerHTML = result.tools.map((tool, index) => `
-    <li class="${tool.status === 'approval_required' ? 'approval' : ''}">
-      <div class="trace-index">${index + 1}</div>
-      <div><header><strong>${escapeHtml(tool.label)}</strong><span>${tool.status === 'approval_required' ? 'APPROVAL' : 'DONE'}</span></header><code>${escapeHtml(tool.name)}</code><p>${escapeHtml(tool.output)}</p><small>MOCK TOOL</small></div>
-    </li>`).join('')
+  $('#agent-status').textContent = 'Ready'
 }
 
 async function run(message) {
   const response = $('#agent-response')
   response.classList.add('loading')
+  $('#agent-status').textContent = 'Working'
   try {
     const request = await fetch('/api/triage', {
       method: 'POST',
@@ -59,7 +67,9 @@ async function run(message) {
     renderResult(await request.json())
   } catch (error) {
     response.classList.remove('loading')
-    response.querySelector('.typing').textContent = error.message
+    const typing = response.querySelector('.typing')
+    if (typing) typing.textContent = error instanceof Error ? error.message : 'Runtime unavailable'
+    $('#agent-status').textContent = 'Offline'
   }
 }
 
@@ -68,14 +78,14 @@ $('#composer').addEventListener('submit', (event) => {
   run($('#message-input').value)
 })
 
+showRequestedView()
 fetch('/api/setup').then((response) => response.json()).then(renderSetup).catch(() => {
-  $('#runtime-state').textContent = 'Offline'
+  $('#agent-count').textContent = 'Runtime offline'
 })
 
 if (params.get('scenario') === 'payments') {
   $('#message-input').value = '@Triage Our supplier transfer is still pending after 24 hours. Check the payment rail and prepare an escalation.'
 }
-
-if (params.has('demo')) {
-  setTimeout(() => run($('#message-input').value), 350)
+if (params.has('demo') && params.get('view') !== 'agents') {
+  setTimeout(() => run($('#message-input').value), 250)
 }

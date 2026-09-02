@@ -22,14 +22,13 @@ npm install
 npm run demo
 ```
 
-- Buzz-style collaboration client: `http://127.0.0.1:8008/?demo=1`
+- Buzz-faithful collaboration client: `http://127.0.0.1:8008/?demo=1`
+- Buzz Agents setup: `http://127.0.0.1:8008/?view=agents`
 - Self-hosted Omnigent-shaped mock runtime: `http://127.0.0.1:8009`
 
 Try the fraud route or open `http://127.0.0.1:8008/?demo=1&scenario=payments` for payments operations. The setup includes a Triage Coordinator, Fraud Review, and Payments Operations agent. Every tool is explicitly labeled as mock, mutations are previews only, and the fraud card-freeze step requires human approval.
 
-![Fraud triage channel](./artifacts/screenshots/triage-channel.png)
-
-![Payments triage route](./artifacts/screenshots/payments-triage.png)
+The local shell follows the upstream Buzz desktop layout: native-style window chrome, the yellow-to-blue workspace sidebar, dense channel messages, a bottom composer, and a dedicated Agents view. Agent routing and mock-tool activity remain inside the conversation instead of occupying a separate operations dashboard.
 
 ## Prerequisites
 
