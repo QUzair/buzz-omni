@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Buzz · Customer triage</title>
+  <title>Buzz · Mastercard Commerce Operations</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -25,91 +25,56 @@
             <a id="agents-nav-link" href="/?view=agents"><span>♙</span>Agents</a>
           </nav>
 
-          <nav class="channel-nav" aria-label="Channels">
-            <section>
-              <h2><span>🐝</span>MassCard Lab</h2>
-              <a href="#"><span>#</span>announcements<i></i></a>
-              <a href="#"><span>#</span>general</a>
-            </section>
-            <section>
-              <h2><span>🛠</span>Operations</h2>
-              <a href="#"><span>#</span>payments-ops<i></i></a>
-              <a id="channel-nav-link" class="selected" href="/?demo=1"><span>#</span>customer-triage<b>6</b></a>
-              <a href="#"><span>#</span>risk-review</a>
-            </section>
-            <section>
-              <h2><span>🚀</span>Launch room</h2>
-              <a href="#"><span>#</span>merchant-expansion<i></i></a>
-              <a href="#"><span>▢</span>launch-approvals</a>
-            </section>
-            <section class="simple-section">
-              <h2>Channels</h2>
-              <a href="#"><span>▢</span>Welcome</a>
-            </section>
+          <nav id="channel-nav" class="channel-nav" aria-label="Channels" aria-live="polite">
+            <section><h2>Loading workspace…</h2></section>
             <section class="dm-section">
               <h2>Direct messages</h2>
-              <a href="#"><span class="tiny-avatar blue">AL</span>Alice Lane</a>
-              <a href="#"><span class="tiny-avatar green">BO</span>Bob Okafor<b>1</b></a>
-              <a href="#"><span class="tiny-avatar peach">CA</span>Carol Adams</a>
+              <a href="#"><span class="tiny-avatar blue">MP</span>Maya Patel</a>
+              <a href="#"><span class="tiny-avatar green">AK</span>Aisha Khan<b>1</b></a>
+              <a href="#"><span class="tiny-avatar peach">NO</span>Nora Okafor</a>
             </section>
           </nav>
 
           <footer class="buzz-profile">
-            <span class="profile-avatar">AQ<i></i></span>
-            <div><strong>Alex Qureshi</strong><small>🐝 MassCard Lab</small></div>
+            <span class="profile-avatar">MP<i></i></span>
+            <div><strong>Maya Patel</strong><small>Mastercard · Demo workspace</small></div>
             <button aria-label="Profile options">•••</button>
           </footer>
         </aside>
 
         <main id="channel-view" class="buzz-main channel-view">
           <header class="buzz-page-header">
-            <h1><span>#</span> customer-triage</h1>
+            <div class="channel-heading"><h1><span>#</span> <span id="channel-name">network-operations</span></h1><p id="channel-purpose">Loading channel…</p></div>
             <div><button aria-label="Channel members">♙ <b>6</b></button><button aria-label="Start huddle">♩</button><button aria-label="Channel settings">☷</button></div>
           </header>
 
           <section id="messages" class="buzz-messages" aria-label="Channel messages" aria-live="polite">
-            <article class="buzz-message">
-              <div class="message-avatar alice-avatar">AL</div>
-              <div class="message-copy"><header><strong>Alice Lane</strong><time>10:21 AM</time></header><p>Seeing a spike in duplicate card-charge reports from the support queue. Can we get a quick read before stand-up?</p><div class="buzz-reactions"><button>👀 <span>3</span></button></div></div>
-            </article>
-            <div class="new-rule"><span>NEW</span></div>
-            <article class="buzz-message">
-              <div class="message-avatar bob-avatar">BO</div>
-              <div class="message-copy"><header><strong>Bob Okafor</strong><time>10:23 AM</time></header><p>Status page is green. The reports look concentrated around one merchant reference.</p></div>
-            </article>
-            <article class="buzz-message">
-              <div class="message-avatar carol-avatar">CA</div>
-              <div class="message-copy"><header><strong>Carol Adams</strong><time>10:24 AM</time></header><p><mark>@Triage</mark> My card was charged three times at Northstar Market and two of them are not mine. Please investigate and prepare an escalation.</p></div>
-            </article>
-            <article id="agent-response" class="buzz-message agent-message loading">
-              <div class="message-avatar triage-avatar">🐝</div>
-              <div class="message-copy"><header><strong>Triage Coordinator</strong><time>10:24 AM</time></header><div class="typing"><i></i><i></i><i></i><span>Working…</span></div></div>
-            </article>
+            <div class="channel-loading" role="status">Loading modeled conversation…</div>
           </section>
 
           <div class="composer-wrap">
             <form id="composer" class="buzz-composer">
-              <label><span class="sr-only">Message customer triage</span><textarea id="message-input" rows="2" placeholder="Message #customer-triage">@Triage My card was charged three times and two were not mine. Please investigate and prepare an escalation.</textarea></label>
+              <label><span id="composer-label" class="sr-only">Message channel</span><textarea id="message-input" rows="2" aria-labelledby="composer-label" placeholder="Message channel"></textarea></label>
               <div class="composer-actions"><div><button type="button" aria-label="Mention someone">@</button><button type="button" aria-label="Attach file">⌕</button><button type="button" aria-label="Add reaction">☺</button><button type="button" aria-label="Formatting">ᴬᴬ</button></div><button class="send-button" type="submit" aria-label="Send message">↑</button></div>
             </form>
-            <div class="agent-working"><span class="mini-bee">🐝</span><strong>Triage:</strong><span id="agent-status">Working</span></div>
+            <div class="composer-status"><div class="agent-working"><span class="mini-bee">◎</span><strong id="active-agent">Agent:</strong><span id="agent-status">Ready</span></div><span id="demo-disclaimer">Fictitious demo data</span></div>
           </div>
         </main>
 
         <main id="agents-view" class="buzz-main agents-view" hidden>
           <header class="agents-page-title">
-            <div><h1>Agents</h1><p>Set up and manage your agents.</p></div>
+            <div><h1>Agents</h1><p>Set up and manage agents for Mastercard Commerce Operations.</p></div>
             <button>⚙ Set agent defaults</button>
           </header>
           <section class="agents-content">
-            <div class="section-title"><div><h2>Your agents</h2><p>Persistent collaborators available across MassCard Lab.</p></div><span id="agent-count">—</span></div>
+            <div class="section-title"><div><h2>Your agents</h2><p>Persistent collaborators available across the demo workspace.</p></div><span id="agent-count">—</span></div>
             <div id="agent-cards" class="buzz-agent-grid" aria-live="polite"></div>
 
-            <div class="section-title team-title"><div><h2>Triage team</h2><p>One shared entry point with specialist routing.</p></div><button>＋ Add to channel</button></div>
+            <div class="section-title team-title"><div><h2>Operations roster</h2><p>Specialists are attached to channels with human review points.</p></div><button>＋ Add to channel</button></div>
             <article class="team-row">
-              <div class="team-stack"><span>🐝</span><span>🛡️</span><span>⚡</span></div>
-              <div><strong>Customer support triage</strong><p>Triage Coordinator · Fraud Review · Payments Operations</p></div>
-              <span class="online-copy">● Ready in #customer-triage</span>
+              <div class="team-stack"><span>◎</span><span>◈</span><span>◇</span><span>△</span></div>
+              <div><strong>Commerce operations agents</strong><p>Network · Threat intelligence · Tokenization · Growth · Triage</p></div>
+              <span class="online-copy">● Ready across 5 channels</span>
               <button aria-label="Team options">•••</button>
             </article>
           </section>

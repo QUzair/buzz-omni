@@ -1,6 +1,6 @@
 {
   "id": "omnigent",
-  "label": "MassCard Omnigent",
+  "label": "Mastercard Omnigent",
   "command": "buzz-omnigent-acp",
   "args": [],
   "env": {

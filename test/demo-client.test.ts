@@ -13,7 +13,9 @@ test('serves the Buzz triage client and proxies only the local mock runtime', as
   const clientPort = (client.address() as AddressInfo).port
 
   const page = await fetch(`http://127.0.0.1:${clientPort}/`).then((response) => response.text())
-  assert.match(page, /Customer triage/)
+  assert.match(page, /Mastercard Commerce Operations/)
+  const app = await fetch(`http://127.0.0.1:${clientPort}/app.js`).then((response) => response.text())
+  assert.match(app, /api\/workspace/)
 
   const setup = await fetch(`http://127.0.0.1:${clientPort}/api/setup`).then((response) => response.json()) as { agents: unknown[] }
   assert.equal(setup.agents.length, 7)

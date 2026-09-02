@@ -13,20 +13,28 @@ Buzz Desktop
 
 The bridge creates one external-host Omnigent session for each ACP session, forwards the Buzz thread, streams the response, and publishes the final answer back to the triggering thread.
 
-## Local triage demo
+## Local Mastercard operations demo
 
-The repository also includes a zero-credential demo with three triage agents and deterministic mock tools. Both services bind to loopback only:
+The repository also includes a zero-credential Mastercard operations workspace with seven agents, five modeled channels, fictitious employee conversations, and deterministic mock tools. Both services bind to loopback only:
 
 ```bash
 npm install
 npm run demo
 ```
 
-- Buzz-faithful collaboration client: `http://127.0.0.1:8008/?demo=1`
+- Buzz-faithful collaboration client: `http://127.0.0.1:8008/?demo=1&channel=network-operations`
 - Buzz Agents setup: `http://127.0.0.1:8008/?view=agents`
 - Self-hosted Omnigent-shaped mock runtime: `http://127.0.0.1:8009`
 
-Try the fraud route or open `http://127.0.0.1:8008/?demo=1&scenario=payments` for payments operations. The setup includes a Triage Coordinator, Fraud Review, and Payments Operations agent. Every tool is explicitly labeled as mock, mutations are previews only, and the fraud card-freeze step requires human approval.
+The channel switcher demonstrates five different employee-steered workflows:
+
+- `#network-operations` — authorization-health investigation and incident drafting
+- `#fraud-intelligence` — card-testing and merchant-domain investigation with dual approval
+- `#tokenization-launch` — token-requestor certification and launch-gate readiness
+- `#merchant-growth` — approval-rate analysis and guarded experiment design
+- `#customer-triage` — issuer support routing across fraud and payments specialists
+
+Every person, conversation, account, metric, and operational event in the demo is fictitious. Tools are explicitly labeled as mock, mutations are previews only, and sensitive controls require human approval.
 
 The local shell follows the upstream Buzz desktop layout: native-style window chrome, the yellow-to-blue workspace sidebar, dense channel messages, a bottom composer, and a dedicated Agents view. Agent routing and mock-tool activity remain inside the conversation instead of occupying a separate operations dashboard.
 
@@ -70,7 +78,7 @@ omnigent host http://127.0.0.1:6767 --background
 omnigent host status --server http://127.0.0.1:6767 --json
 ```
 
-Copy `host_id` from the status output. Open `http://127.0.0.1:6767`, find `masscard_market_strategy`, and copy its agent ID. Choose an existing absolute directory on this Mac for agent work; for a disposable POC, create a dedicated empty directory.
+Copy `host_id` from the status output. Open `http://127.0.0.1:6767`, find `mastercard_market_strategy`, and copy its agent ID. Choose an existing absolute directory on this Mac for agent work; for a disposable POC, create a dedicated empty directory.
 
 The YAML in [`agents/market-strategy.yaml`](./agents/market-strategy.yaml) explicitly selects `darwin_seatbelt`, limits writes to the session workspace, and blocks network access from sandboxed OS tools. Model API access remains in the Omnigent/Codex harness process.
 
@@ -81,7 +89,7 @@ To run the host on another Mac you own, run `omnigent host https://your-own-omni
 In Buzz Desktop, open **Settings → Agent runtimes → Add custom harness** and enter:
 
 - ID: `omnigent`
-- Label: `MassCard Omnigent`
+- Label: `Mastercard Omnigent`
 - Command: `buzz-omnigent-acp`
 - Environment:
   - `OMNIGENT_BASE_URL=http://127.0.0.1:6767`
@@ -91,7 +99,7 @@ In Buzz Desktop, open **Settings → Agent runtimes → Add custom harness** and
 
 The equivalent JSON is in [`config/buzz-custom-harness.example.json`](./config/buzz-custom-harness.example.json).
 
-Create a Buzz agent using the **MassCard Omnigent** runtime, add it to a channel, then send:
+Create a Buzz agent using the **Mastercard Omnigent** runtime, add it to a channel, then send:
 
 ```text
 @Market Strategy compare Germany and France for our first launch.
@@ -135,3 +143,5 @@ Buzz detects the mention, serializes turns per channel, and supplies thread cont
 - [Omnigent external hosts](https://github.com/omnigent-ai/omnigent/blob/main/README.md#connect-another-machine)
 - [Omnigent agent YAML and OS sandbox](https://github.com/omnigent-ai/omnigent/blob/main/docs/AGENT_YAML_SPEC.md#os-environment-os_env)
 - [Omnigent session API](https://github.com/omnigent-ai/omnigent/blob/main/openapi.json)
+- [Mastercard services and operating domains](https://www.mastercard.com/content/mccom/global/en/business/services.html)
+- [Mastercard branding requirements and digital color specifications](https://www.mastercard.com/content/brandcenter/ca/en/brand-requirements/mastercard.html)

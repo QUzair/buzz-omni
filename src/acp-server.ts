@@ -53,7 +53,7 @@ export class AcpServer {
       this.writeResult(request.id, {
         protocolVersion: 2,
         agentCapabilities: { loadSession: false, promptCapabilities: { image: false, audio: false, embeddedContext: false } },
-        agentInfo: { name: 'buzz-omnigent-acp', title: 'MassCard Omnigent', version: '0.1.0' },
+        agentInfo: { name: 'buzz-omnigent-acp', title: 'Mastercard Omnigent', version: '0.1.0' },
       })
       return
     }
