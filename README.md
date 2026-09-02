@@ -48,7 +48,7 @@ BUZZ_DESKTOP_PUBKEY=replace-with-your-public-key
 OPEN_BUZZ_DESKTOP=true
 ```
 
-Enrollment adds that public identity to the relay, all five private channels, and every channel agent's invocation allowlist. An agent's named manager remains its owner and attestor, but is not its exclusive caller: every enrolled, authorized channel member can `@mention` the agent.
+Enrollment adds that public identity to the relay, all five private channels, every channel agent's signed remote-directory policy, and every live invocation allowlist. An agent's named manager remains its owner and attestor, but is not its exclusive caller: every enrolled, authorized channel member can discover and `@mention` the agent in native Buzz autocomplete.
 
 Validate the completed configuration:
 
@@ -174,6 +174,7 @@ Real:
 
 - upstream Buzz relay, CLI, ACP listener, and installed Buzz Desktop app;
 - local Nostr keys, signatures, relay membership, private channel membership, and NIP-OA owner attestations;
+- agent-signed Buzz runtime-directory records and owner-signed invocation policies used by native autocomplete;
 - upstream Omnigent server, SQLite session state, local host/runner, provider harness, and Seatbelt sandbox;
 - five concurrent listeners, explicit host/session binding, tool invocation, and signed threaded responses.
 
@@ -208,6 +209,7 @@ Buzz private channels are membership-scoped. This POC does not claim end-to-end 
 │   └── provider-profiles.ts          agent/tool/provider definitions
 ├── src/                              ACP bridge and Omnigent client
 ├── mastercard_tools/                 deterministic synthetic tools
+├── native/                            tiny publisher built with pinned Buzz crypto/protocol crates
 ├── test/                             bridge and platform tests
 └── artifacts/                        verified native screenshots
 ```
@@ -225,7 +227,8 @@ npm run doctor
 Common issues:
 
 - **Buzz shows no Mastercard channels:** confirm `.env` contains the public key for the currently active Buzz identity, restart the platform, and join `http://127.0.0.1:8010`.
-- **A mention gets no response:** use the exact visible handle, confirm `.env` contains the active Buzz Desktop public key, restart after changing it, check [the status page](http://127.0.0.1:8014/), then inspect `.local/logs/buzz-acp-<agent>.log`.
+- **An agent is missing from `@` autocomplete:** confirm `.env` contains the active Buzz Desktop public key, restart after changing it, then relaunch Buzz so its remote-agent directory cache refreshes. Never re-import or expose a private key for platform enrollment.
+- **A mention gets no response:** use the exact visible handle, check [the status page](http://127.0.0.1:8014/), then inspect `.local/logs/buzz-acp-<agent>.log`.
 - **Omnigent is unhealthy:** inspect `.local/logs/omnigent-server.log` and confirm the pinned installation with `omnigent --version`.
 - **Copilot is unavailable:** verify `gh auth status`, confirm that account has Copilot access, and rerun `npm run setup` to restore the SDK extra.
 - **Gemini fails:** use a newly issued API key, keep it in `.env` or the calling shell, and never print it during the demo.

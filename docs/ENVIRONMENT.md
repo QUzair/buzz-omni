@@ -35,7 +35,7 @@ Place the public key in `.env`:
 BUZZ_DESKTOP_PUBKEY=your-64-character-public-key
 ```
 
-The platform adds that identity to the relay, all five private channels, and each channel agent's explicit author allowlist. This lets the enrolled employee invoke `@NetworkOps`, `@FraudReview`, `@TokenLaunch`, `@SettlementOps`, and `@ComplianceReview`; the named agent manager remains its owner/attestor rather than its exclusive caller. Membership persists in the local Buzz Docker volume. If Buzz Desktop creates a new identity, update the value and restart the platform.
+The platform adds that identity to the relay, all five private channels, each agent's signed remote-directory policy, and each live listener's explicit author allowlist. This lets the enrolled employee discover and invoke `@NetworkOps`, `@FraudReview`, `@TokenLaunch`, `@SettlementOps`, and `@ComplianceReview`; the named agent manager remains its owner/attestor rather than its exclusive caller. Membership and directory policy persist in the local Buzz Docker volume. If Buzz Desktop creates a new identity, update the value, restart the platform, and relaunch Buzz to refresh its directory cache.
 
 ## Copilot mode
 

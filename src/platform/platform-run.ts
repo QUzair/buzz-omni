@@ -17,6 +17,7 @@ const localRoot = resolve('.local')
 const logsRoot = resolve(localRoot, 'logs')
 const buzzAcpPath = resolve(localRoot, 'bin/buzz-acp')
 const buzzCliPath = resolve(localRoot, 'bin/buzz')
+const publishAgentDirectoryPath = resolve(localRoot, 'bin/publish_agent_directory')
 const bridgePath = resolve('dist/src/cli.js')
 const relayHttpUrl = 'http://127.0.0.1:8010'
 const relayWsUrl = 'ws://127.0.0.1:8010'
@@ -122,6 +123,7 @@ async function runPlatform(): Promise<void> {
   const provider = options.provider
   await requireExecutable(buzzAcpPath, 'Run npm run platform:bootstrap to build the pinned upstream buzz-acp binary')
   await requireExecutable(buzzCliPath, 'Run npm run platform:bootstrap to build the pinned upstream Buzz CLI')
+  await requireExecutable(publishAgentDirectoryPath, 'Run npm run platform:bootstrap to build the Buzz remote-agent directory publisher')
   process.env.BUZZ_CLI = buzzCliPath
   await mkdir(logsRoot, { recursive: true, mode: 0o700 })
   await mkdir(resolve(localRoot, 'omnigent/artifacts'), { recursive: true, mode: 0o700 })

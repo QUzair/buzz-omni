@@ -10,6 +10,8 @@ export const OMNIGENT_SOURCE_COMMIT = 'f2a670b348f7110bf4ea18b643bcd3852f1d9712'
 const root = resolve('.')
 const sourceRoot = resolve('.local/upstream/buzz')
 const binaryRoot = resolve('.local/bin')
+const directoryPublisherSource = resolve('native/publish_agent_directory.rs')
+const directoryPublisherTarget = resolve(sourceRoot, 'crates/buzz-cli/examples/publish_agent_directory.rs')
 
 export async function bootstrapPlatform(): Promise<{ buzzCommit: string; omnigentCommit: string; binaries: string[] }> {
   await requireCommand('git')
@@ -26,17 +28,21 @@ export async function bootstrapPlatform(): Promise<{ buzzCommit: string; omnigen
   if (!/(^|[:/])block\/buzz(?:\.git)?$/.test(origin)) throw new Error('Existing .local/upstream/buzz is not the upstream block/buzz repository')
   await exec('git', ['-C', sourceRoot, 'fetch', '--depth', '1', 'origin', BUZZ_SOURCE_COMMIT])
   await exec('git', ['-C', sourceRoot, 'checkout', '--detach', BUZZ_SOURCE_COMMIT])
+  await mkdir(resolve(sourceRoot, 'crates/buzz-cli/examples'), { recursive: true })
+  await copyFile(directoryPublisherSource, directoryPublisherTarget)
   await exec('cargo', [
     'build', '--release', '--locked',
     '-p', 'buzz-cli', '--bin', 'buzz',
     '-p', 'buzz-acp', '--bin', 'buzz-acp',
     '-p', 'buzz-sdk', '--example', 'compute_auth_tag',
+    '-p', 'buzz-cli', '--example', 'publish_agent_directory',
   ], process.env, sourceRoot, 64 * 1024 * 1024)
 
   const binaries = [
     [resolve(sourceRoot, 'target/release/buzz'), resolve(binaryRoot, 'buzz')],
     [resolve(sourceRoot, 'target/release/buzz-acp'), resolve(binaryRoot, 'buzz-acp')],
     [resolve(sourceRoot, 'target/release/examples/compute_auth_tag'), resolve(binaryRoot, 'compute_auth_tag')],
+    [resolve(sourceRoot, 'target/release/examples/publish_agent_directory'), resolve(binaryRoot, 'publish_agent_directory')],
   ] as const
   for (const [source, target] of binaries) {
     await copyFile(source, target)

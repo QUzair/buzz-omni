@@ -9,6 +9,7 @@ const relayUrl = 'http://127.0.0.1:8010'
 const identityPath = resolve('.local/buzz/identities.json')
 const seedStatePath = resolve('.local/buzz/seed-state.json')
 const computeAuthTagPath = resolve('.local/bin/compute_auth_tag')
+const publishAgentDirectoryPath = resolve('.local/bin/publish_agent_directory')
 const composeArgs = ['compose', '--env-file', '.local/buzz/buzz.env', '-f', 'infra/buzz/compose.yml']
 
 type Keypair = { publicKey: string; secretKey: string }
@@ -41,7 +42,7 @@ export type AgentIdentity = keyof typeof agentProfiles
 export const agentIdentityNames = Object.keys(agentProfiles) as AgentIdentity[]
 
 type SeedMessage = { author: HumanIdentity; content: string }
-type ChannelSeed = {
+export type ChannelSeed = {
   name: string
   description: string
   agent: AgentIdentity
@@ -137,6 +138,21 @@ export function normalizeDesktopPublicKey(value: string | undefined): string | u
   return publicKey
 }
 
+export function buildAgentAccessAllowlist(
+  channel: ChannelSeed,
+  identities: Record<string, Keypair>,
+  desktopPublicKey?: string,
+): string[] {
+  return [...new Set([
+    ...channel.members.map((name) => {
+      const identity = identities[name]
+      if (!identity) throw new Error(`Buzz identity is missing: ${name}`)
+      return identity.publicKey
+    }),
+    ...(desktopPublicKey ? [desktopPublicKey] : []),
+  ])]
+}
+
 export async function seedBuzz(
   desktopPublicKeyInput: string | undefined = process.env.BUZZ_DESKTOP_PUBKEY,
 ): Promise<{ channels: Record<string, string>; seededMessages: string[]; desktopMemberEnrolled: boolean }> {
@@ -158,6 +174,19 @@ export async function seedBuzz(
     const authTag = state.authTags[identityName] ?? await computeAuthTag(identities.owner!, pair.publicKey)
     state.authTags[identityName] = authTag
     await setProfile(pair, profile, authTag)
+  }
+
+  for (const channel of channelCatalog) {
+    const pair = identities[channel.agent]!
+    const authTag = state.authTags[channel.agent]
+    if (!authTag) throw new Error(`Buzz owner attestation is missing: ${channel.agent}`)
+    await publishAgentDirectory(
+      identities.owner!,
+      pair,
+      authTag,
+      agentProfiles[channel.agent].name,
+      buildAgentAccessAllowlist(channel, identities, desktopPublicKey),
+    )
   }
 
   for (const channel of channelCatalog) {
@@ -225,6 +254,24 @@ async function computeAuthTag(owner: Keypair, agentPublicKey: string): Promise<s
     throw new Error('Could not create a valid owner attestation for a Buzz agent')
   }
   return JSON.stringify(parsed)
+}
+
+async function publishAgentDirectory(
+  owner: Keypair,
+  agent: Keypair,
+  authTag: string,
+  agentName: string,
+  respondToAllowlist: string[],
+): Promise<void> {
+  await run(publishAgentDirectoryPath, [], {
+    ...process.env,
+    BUZZ_RELAY_URL: relayUrl,
+    BUZZ_OWNER_PRIVATE_KEY: owner.secretKey,
+    BUZZ_AGENT_PRIVATE_KEY: agent.secretKey,
+    BUZZ_AUTH_TAG: authTag,
+    BUZZ_AGENT_NAME: agentName,
+    BUZZ_RESPOND_TO_ALLOWLIST: respondToAllowlist.join(','),
+  })
 }
 
 async function findOrCreateChannel(owner: Keypair, channel: ChannelSeed): Promise<string> {

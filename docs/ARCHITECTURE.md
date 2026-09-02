@@ -79,6 +79,7 @@ sequenceDiagram
 - Each seeded employee has a distinct signing identity.
 - The real Buzz Desktop user supplies only a public key through `BUZZ_DESKTOP_PUBKEY`; the platform never reads its private key.
 - That enrolled public key is added to every private channel and every agent invocation allowlist. A named agent manager is the owner/attestor and control authority, not the only employee permitted to invoke it.
+- Each external agent also publishes an agent-signed `kind:10100` runtime-directory record. Aisha publishes the matching owner-signed `kind:30177` allowlist policy. Native Buzz verifies both records plus bot-role channel membership before showing the agent in `@` autocomplete.
 - `buzz-acp` uses channel-scoped session policy, so multiple allowed employees steer the same agent/channel session.
 - The bridge binds each ACP session to an explicit Omnigent agent ID, host ID, and local workspace.
 

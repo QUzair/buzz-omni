@@ -46,6 +46,7 @@ export async function runPlatformDoctor(
     await checkCommand('Omnigent', 'omnigent', ['--version']),
     await checkExecutable('Buzz CLI', resolve('.local/bin/buzz')),
     await checkExecutable('Buzz ACP listener', resolve('.local/bin/buzz-acp')),
+    await checkExecutable('Buzz remote-agent directory publisher', resolve('.local/bin/publish_agent_directory')),
     await checkPath('Buzz Desktop', '/Applications/Buzz.app'),
   ]
   if (report.provider === 'copilot') {
