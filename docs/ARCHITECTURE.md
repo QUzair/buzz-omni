@@ -78,6 +78,7 @@ sequenceDiagram
 - The community owner signs a NIP-OA attestation for each agent profile.
 - Each seeded employee has a distinct signing identity.
 - The real Buzz Desktop user supplies only a public key through `BUZZ_DESKTOP_PUBKEY`; the platform never reads its private key.
+- That enrolled public key is added to every private channel and every agent invocation allowlist. A named agent manager is the owner/attestor and control authority, not the only employee permitted to invoke it.
 - `buzz-acp` uses channel-scoped session policy, so multiple allowed employees steer the same agent/channel session.
 - The bridge binds each ACP session to an explicit Omnigent agent ID, host ID, and local workspace.
 
@@ -85,7 +86,7 @@ sequenceDiagram
 
 Upstream `buzz-acp` owns mention detection, channel-context collection, event deduplication, and serialized session prompting. The configured policy is:
 
-- respond only to the allowlisted employee identities;
+- respond only to seeded employee identities and enrolled Buzz Desktop identities on the explicit allowlist;
 - keep one session per agent/channel;
 - steer an active turn when additional context arrives;
 - include up to 12 recent context messages;

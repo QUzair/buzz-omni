@@ -48,6 +48,8 @@ BUZZ_DESKTOP_PUBKEY=replace-with-your-public-key
 OPEN_BUZZ_DESKTOP=true
 ```
 
+Enrollment adds that public identity to the relay, all five private channels, and every channel agent's invocation allowlist. An agent's named manager remains its owner and attestor, but is not its exclusive caller: every enrolled, authorized channel member can `@mention` the agent.
+
 Validate the completed configuration:
 
 ```bash
@@ -223,7 +225,7 @@ npm run doctor
 Common issues:
 
 - **Buzz shows no Mastercard channels:** confirm `.env` contains the public key for the currently active Buzz identity, restart the platform, and join `http://127.0.0.1:8010`.
-- **A mention gets no response:** use the exact visible handle, check [the status page](http://127.0.0.1:8014/), then inspect `.local/logs/buzz-acp-<agent>.log`.
+- **A mention gets no response:** use the exact visible handle, confirm `.env` contains the active Buzz Desktop public key, restart after changing it, check [the status page](http://127.0.0.1:8014/), then inspect `.local/logs/buzz-acp-<agent>.log`.
 - **Omnigent is unhealthy:** inspect `.local/logs/omnigent-server.log` and confirm the pinned installation with `omnigent --version`.
 - **Copilot is unavailable:** verify `gh auth status`, confirm that account has Copilot access, and rerun `npm run setup` to restore the SDK extra.
 - **Gemini fails:** use a newly issued API key, keep it in `.env` or the calling shell, and never print it during the demo.

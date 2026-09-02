@@ -31,3 +31,24 @@ test('keeps Buzz identity secrets in process environment and scopes employee ste
   assert.equal(env.BUZZ_ACP_AGENT_ARGS, '/app/dist/src/cli.js')
   assert.equal(env.OMNIGENT_AGENT_ID, 'ag_demo')
 })
+
+test('allows an enrolled Buzz Desktop member to invoke every remote agent', () => {
+  const runtime = runtimeCatalog[0]!
+  const identities = Object.fromEntries([
+    'owner', runtime.identity, ...runtime.allowedEmployees,
+  ].map((name, index) => [name, { publicKey: `${index + 1}`.repeat(64).slice(0, 64), secretKey: `${index + 6}`.repeat(64).slice(0, 64) }]))
+  const desktopPublicKey = 'ab'.repeat(32)
+  const env = buildAgentEnvironment(runtime, {
+    identities,
+    authTag: '["auth","owner","","sig"]',
+    desktopPublicKey,
+    omnigentAgentId: 'ag_demo',
+    omnigentHostId: '550e8400e29b41d4a716446655440000',
+    workspace: '/tmp/demo-workspace',
+    bridgePath: '/app/dist/src/cli.js',
+  }, {})
+
+  const allowlist = env.BUZZ_ACP_RESPOND_TO_ALLOWLIST?.split(',') ?? []
+  assert.ok(allowlist.includes(desktopPublicKey))
+  assert.equal(new Set(allowlist).size, allowlist.length)
+})

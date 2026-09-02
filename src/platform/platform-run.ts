@@ -36,6 +36,7 @@ type RuntimeDefinition = {
 type AgentEnvironmentInput = {
   identities: Record<string, Keypair>
   authTag: string
+  desktopPublicKey?: string
   omnigentAgentId: string
   omnigentHostId: string
   workspace: string
@@ -74,7 +75,10 @@ export function buildAgentEnvironment(
   baseEnvironment: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
   const identity = requireIdentity(input.identities, runtime.identity)
-  const allowlist = runtime.allowedEmployees.map((name) => requireIdentity(input.identities, name).publicKey).join(',')
+  const allowlist = [...new Set([
+    ...runtime.allowedEmployees.map((name) => requireIdentity(input.identities, name).publicKey),
+    ...(input.desktopPublicKey ? [input.desktopPublicKey] : []),
+  ])].join(',')
   return {
     ...baseEnvironment,
     PYTHONPATH: root,
@@ -158,7 +162,15 @@ async function runPlatform(): Promise<void> {
       const log = openSync(resolve(logsRoot, `buzz-acp-${runtime.agentSlug}.log`), 'w', 0o600)
       const child = spawn(buzzAcpPath, [], {
         cwd: root,
-        env: buildAgentEnvironment(runtime, { identities, authTag, omnigentAgentId: agentId, omnigentHostId: hostId, workspace, bridgePath }, runtimeEnvironment),
+        env: buildAgentEnvironment(runtime, {
+          identities,
+          authTag,
+          desktopPublicKey: options.desktopPublicKey,
+          omnigentAgentId: agentId,
+          omnigentHostId: hostId,
+          workspace,
+          bridgePath,
+        }, runtimeEnvironment),
         stdio: ['ignore', log, log],
       })
       closeSync(log)
