@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { TRIAGE_AGENTS, runTriage } from './triage.js'
+import { getWorkspace, runChannelWorkflow } from './workspace.js'
 
 const json = (response: ServerResponse, status: number, body: unknown): void => {
   response.writeHead(status, {
@@ -30,11 +31,16 @@ export async function startRuntimeServer(port = 8009): Promise<Server> {
         json(response, 200, { status: 'ok', service: 'self-hosted-omnigent-mock', port })
       } else if (request.method === 'GET' && request.url === '/v1/agents') {
         json(response, 200, {
-          host: { name: 'masscard-local', sandbox: 'darwin_seatbelt', network: 'blocked', status: 'online' },
+          host: { name: 'mastercard-local', sandbox: 'darwin_seatbelt', network: 'blocked', status: 'online' },
           agents: TRIAGE_AGENTS,
         })
+      } else if (request.method === 'GET' && request.url === '/v1/workspace') {
+        json(response, 200, getWorkspace())
       } else if (request.method === 'POST' && request.url === '/v1/triage') {
         json(response, 200, runTriage(await readMessage(request)))
+      } else if (request.method === 'POST' && request.url?.startsWith('/v1/workflows/')) {
+        const channelId = decodeURIComponent(request.url.slice('/v1/workflows/'.length))
+        json(response, 200, runChannelWorkflow(channelId, await readMessage(request)))
       } else {
         json(response, 404, { error: 'Not found' })
       }

@@ -17,7 +17,13 @@ const securityHeaders = {
 }
 
 const pipeRuntime = async (request: IncomingMessage, response: ServerResponse, runtimeUrl: string): Promise<void> => {
-  const path = request.url === '/api/setup' ? '/v1/agents' : '/v1/triage'
+  const path = request.url === '/api/setup'
+    ? '/v1/agents'
+    : request.url === '/api/workspace'
+      ? '/v1/workspace'
+      : request.url?.startsWith('/api/workflows/')
+        ? `/v1/workflows/${encodeURIComponent(decodeURIComponent(request.url.slice('/api/workflows/'.length)))}`
+        : '/v1/triage'
   const body = request.method === 'POST' ? await readBody(request) : undefined
   const upstream = await fetch(`${runtimeUrl}${path}`, {
     method: request.method,
@@ -45,7 +51,15 @@ export async function startClientServer(port = 8008, runtimeUrl = 'http://127.0.
         await pipeRuntime(request, response, runtimeUrl)
         return
       }
+      if (request.method === 'GET' && request.url === '/api/workspace') {
+        await pipeRuntime(request, response, runtimeUrl)
+        return
+      }
       if (request.method === 'POST' && request.url === '/api/triage') {
+        await pipeRuntime(request, response, runtimeUrl)
+        return
+      }
+      if (request.method === 'POST' && request.url?.startsWith('/api/workflows/')) {
         await pipeRuntime(request, response, runtimeUrl)
         return
       }

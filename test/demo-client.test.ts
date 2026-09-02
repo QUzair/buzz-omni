@@ -16,7 +16,10 @@ test('serves the Buzz triage client and proxies only the local mock runtime', as
   assert.match(page, /Customer triage/)
 
   const setup = await fetch(`http://127.0.0.1:${clientPort}/api/setup`).then((response) => response.json()) as { agents: unknown[] }
-  assert.equal(setup.agents.length, 3)
+  assert.equal(setup.agents.length, 7)
+
+  const workspace = await fetch(`http://127.0.0.1:${clientPort}/api/workspace`).then((response) => response.json()) as { channels: unknown[] }
+  assert.equal(workspace.channels.length, 5)
 
   const turn = await fetch(`http://127.0.0.1:${clientPort}/api/triage`, {
     method: 'POST',
@@ -24,4 +27,11 @@ test('serves the Buzz triage client and proxies only the local mock runtime', as
     body: JSON.stringify({ message: 'This charge is not mine' }),
   }).then((response) => response.json()) as { route: string }
   assert.equal(turn.route, 'fraud-review')
+
+  const workflow = await fetch(`http://127.0.0.1:${clientPort}/api/workflows/merchant-growth`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: '@GrowthInsights explain the approval-rate change' }),
+  }).then((response) => response.json()) as { agent: string }
+  assert.equal(workflow.agent, 'Growth Insights')
 })

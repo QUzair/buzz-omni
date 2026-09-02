@@ -43,6 +43,34 @@ export const TRIAGE_AGENTS = [
     role: 'Diagnoses transfer, settlement, and card-payment issues.',
     tools: ['check_payment_rails', 'lookup_transfer', 'create_escalation_preview'],
   },
+  {
+    id: 'network-operations',
+    name: 'Network Operations',
+    handle: '@NetworkOps',
+    role: 'Correlates authorization health, regional signals, and incident evidence.',
+    tools: ['check_network_health', 'compare_authorization_rates', 'draft_incident_update'],
+  },
+  {
+    id: 'threat-intelligence',
+    name: 'Threat Intelligence',
+    handle: '@ThreatIntel',
+    role: 'Investigates card-testing and merchant-domain signals with approval-gated controls.',
+    tools: ['detect_card_testing_cluster', 'scan_merchant_domain', 'prepare_control_rule'],
+  },
+  {
+    id: 'tokenization-launch',
+    name: 'Tokenization Launch',
+    handle: '@TokenOps',
+    role: 'Checks token-requestor readiness, certification evidence, and launch dependencies.',
+    tools: ['check_token_requestor_readiness', 'verify_certification_evidence', 'draft_launch_checklist'],
+  },
+  {
+    id: 'growth-insights',
+    name: 'Growth Insights',
+    handle: '@GrowthInsights',
+    role: 'Explains merchant performance shifts and prepares measurable experiments.',
+    tools: ['segment_approval_rates', 'compare_decline_reasons', 'draft_experiment_brief'],
+  },
 ] as const
 
 const mock = (name: string, label: string, output: string, status: MockToolRun['status'] = 'completed'): MockToolRun => ({
